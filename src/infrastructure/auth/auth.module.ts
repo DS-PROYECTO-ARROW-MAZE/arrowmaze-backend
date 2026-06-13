@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from '../../adapters/controllers/auth.controller';
+import { AuthController } from '../adapters/controllers/auth.controller';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { I_USER_REPOSITORY } from '../../domain/ports/user.repository.interface';
 import { InMemoryUserRepository } from '../database/in-memory-user.repository';
@@ -16,4 +16,4 @@ import { InMemoryUserRepository } from '../database/in-memory-user.repository';
     },
   ],
 })
-export class AuthModule {}
+export class AuthModule { }
