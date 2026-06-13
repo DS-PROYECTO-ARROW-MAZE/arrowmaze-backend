@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "grill-with-docs": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "7c212cee6a823b956aaec7dff2a846814fe9986caa2e62313734010c7bd3db70"
+    },
+    "handoff": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/handoff/SKILL.md",
+      "computedHash": "3fdffd9dce6fc3e9f9f756ba79d694c5f162e11c7e7fbc72a0958f204312e0b1"
+    },
+    "nestjs-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs-patterns/SKILL.md",
+      "computedHash": "c76d605454b9c21b11716ead1753667e583e6c30e803982d247748b79a1d0da7"
+    },
+    "teach": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/teach/SKILL.md",
+      "computedHash": "d1c64f5747de3da32afd390096ecc9a116245e3b4a17c587b5de345e8235522a"
+    },
+    "write-a-skill": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/write-a-skill/SKILL.md",
+      "computedHash": "3b58a16bde08f84ed490cd449ecdc40289216d660e070c485f53bc2d1ed2b843"
+    },
+    "zoom-out": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/zoom-out/SKILL.md",
+      "computedHash": "a8b8ed45609fdfa9f184d0c9f69326e43822a42eebea14db2792d777373de562"
+    }
+  }
+}
