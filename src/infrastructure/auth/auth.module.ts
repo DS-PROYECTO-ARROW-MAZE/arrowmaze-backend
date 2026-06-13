@@ -2,17 +2,17 @@ import { Module } from '@nestjs/common';
 import { AuthController } from '../adapters/controllers/auth.controller';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { I_USER_REPOSITORY } from '../../domain/ports/user.repository.interface';
-import { InMemoryUserRepository } from '../database/in-memory-user.repository';
+import { SupabaseUserRepository } from '../database/supabase/supabase-user.repository';
+import { SupabaseModule } from '../database/supabase/supabase.module';
 
 @Module({
+  imports: [SupabaseModule],
   controllers: [AuthController],
   providers: [
-    RegisterUserUseCase, // Registramos el caso de uso
+    RegisterUserUseCase,
     {
-      // Aquí le decimos a NestJS: "Cuando alguien pida el I_USER_REPOSITORY..."
       provide: I_USER_REPOSITORY,
-      // "...entrégale esta implementación concreta"
-      useClass: InMemoryUserRepository,
+      useClass: SupabaseUserRepository,
     },
   ],
 })
