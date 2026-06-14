@@ -179,9 +179,10 @@ Métodos: `+ ejecutar(req: RankingRequest): List<EntradaRankingResponse>`
 
 > **ORM: Prisma.** El acceso a datos se hace con Prisma sobre PostgreSQL (alojado en Supabase).
 > Los adaptadores de persistencia reciben `ServicioPrisma` (envuelve `PrismaClient`) y traducen
-> filas Prisma ↔ agregados de dominio con un mapeador (`MapeadorPersistencia...`), de modo que los
-> tipos generados por Prisma nunca salen de la capa de infraestructura. El esquema y las migraciones
-> viven en una carpeta `prisma/` en la raíz del proyecto.
+> filas Prisma ↔ agregados de dominio mediante los mapeadores de persistencia
+> (`MapeadorPersistenciaJugador`, `MapeadorPersistenciaNivel`), de modo que los tipos generados por
+> Prisma nunca salen de la capa de infraestructura. El esquema y las migraciones viven en una
+> carpeta `prisma/` en la raíz del proyecto.
 
 ### Adaptadores de persistencia
 
@@ -196,6 +197,13 @@ Métodos: `+ obtenerPorId(id: IdNivel): Nivel` · `+ obtenerPorNumero(numero: Nu
 **ConsultaRankingPrisma** «Adaptador» — implementa IConsultaRanking
 Atributos: `- prisma: ServicioPrisma`
 Métodos: `+ obtenerTop(idNivel: IdNivel, limite: int): List<EntradaRankingResponse>`
+
+### Mapeadores de persistencia
+
+Traducen Dominio ↔ filas planas de Prisma (distintos de `MapeadorJugador` / `MapeadorNivel` de Aplicación, que mapean Dominio ↔ DTO). El retorno de `aPersistencia` es una estructura plana interna de Prisma, no una clase del modelo.
+
+- **MapeadorPersistenciaJugador** «Mapeador» — `+ aDominio(filaJugador, filasProgreso): Jugador` _(reconstituye el agregado con sus Value Objects y su `List<ProgresoNivel>` a partir de filas planas)_ · `+ aPersistencia(jugador: Jugador): <estructura plana para Prisma>` _(separa el agregado en filas)_
+- **MapeadorPersistenciaNivel** «Mapeador» — `+ aDominio(filaNivel): Nivel` · `+ aPersistencia(nivel: Nivel): <estructura plana para Prisma>`
 
 ### Adaptadores de puertos técnicos
 
@@ -347,6 +355,14 @@ Adaptadores → cliente externo:
 - `ConsultaRankingPrisma ┈> ServicioPrisma`
 - `PublicadorEventosPrisma ┈> ServicioPrisma`
 - `UnidadDeTrabajoPrisma ┈> ServicioPrisma`
+
+Repositorios → mapeadores de persistencia:
+- `RepositorioJugadorPrisma ┈> MapeadorPersistenciaJugador`
+- `RepositorioNivelPrisma ┈> MapeadorPersistenciaNivel`
+
+Mapeadores de persistencia → dominio:
+- `MapeadorPersistenciaJugador ┈> Jugador`
+- `MapeadorPersistenciaNivel ┈> Nivel`
 
 Controladores → casos de uso:
 - `ControladorAuth ┈> RegistrarJugadorCasoDeUso`
