@@ -21,21 +21,31 @@ Production-grade NestJS patterns for modular TypeScript backends.
 Hexagonal architecture (Ports & Adapters): the domain has zero framework dependencies; application defines use cases and ports; infrastructure wires everything together.
 
 ```text
+prisma/                              ← Prisma lives at the project root, NOT inside src/
+├── schema.prisma                    ← datasource (Supabase Postgres), generator, models
+├── migrations/                      ← versioned migrations (prisma migrate)
+└── seed.ts                          ← optional seed script
+
 src/
 ├── app.module.ts
 ├── main.ts
 │
-├── domain/                          ← pure TypeScript, no NestJS/ORM imports
-│   ├── entities/                    ← domain models (no ORM decorators)
-│   ├── value-objects/
+├── domain/                          ← pure TypeScript, no NestJS/Prisma imports
+│   ├── entities/                    ← aggregates & entities (NOT Prisma models)
+│   ├── value-objects/               ← value objects with validating factories
+│   ├── events/                      ← domain events raised by aggregates
 │   ├── repositories/                ← repository interfaces (driven ports)
-│   └── services/                    ← stateless domain logic
+│   └── services/                    ← stateless domain logic (optional; for rules
+│                                       that don't belong to a single aggregate)
 │
 ├── application/                     ← depends on domain only
-│   ├── use-cases/                   ← one class per use case
+│   ├── use-cases/                   ← one class per use case (implement the use-case contract)
 │   ├── dtos/                        ← input/output contracts
-│   ├── ports/                       ← driven-side interfaces (email, storage, etc.)
-│   └── mappers/                     ← domain ↔ DTO conversion
+│   ├── ports/                       ← driven-side interfaces (hash, token, events,
+│   │                                  unit-of-work, read-model queries, …)
+│   ├── mappers/                     ← domain ↔ DTO conversion
+│   └── decorators/                  ← AOP use-case decorators (logging, metrics) that
+│                                       wrap the use-case contract — NOT NestJS HTTP interceptors
 │
 └── infrastructure/                  ← framework + third-party glue
     ├── adapters/
@@ -43,22 +53,31 @@ src/
     │   │   ├── controllers/
     │   │   ├── guards/
     │   │   ├── filters/
-    │   │   ├── interceptors/
+    │   │   ├── interceptors/        ← NestJS HTTP interceptors (distinct from application/decorators/)
     │   │   └── pipes/
-    │   └── persistence/             ← driven adapters (DB implementations)
-    │       ├── repositories/        ← implements domain repository interfaces
-    │       └── entities/            ← ORM-decorated models (if needed)
+    │   ├── persistence/             ← driven adapters backed by Prisma
+    │   │   ├── prisma/              ← PrismaService (extends PrismaClient) + module
+    │   │   ├── repositories/        ← implement domain repo interfaces via Prisma (return aggregates)
+    │   │   ├── mappers/             ← Prisma row ↔ domain aggregate conversion
+    │   │   ├── queries/             ← read-model adapters (Prisma/raw SQL → response DTOs)
+    │   │   └── unit-of-work/        ← transaction boundary wrapping prisma.$transaction
+    │   ├── security/                ← driven adapters for auth ports (hashing, token signing)
+    │   └── events/                  ← driven adapter that publishes domain events
     ├── config/
     │   ├── configuration.ts
     │   └── validation.ts
     └── modules/                     ← NestJS module wiring
 ```
 
-- `domain/` must never import from `application/`, `infrastructure/`, NestJS, or any ORM.
-- `application/` imports only from `domain/`. Use cases depend on repository interfaces, not implementations.
-- `infrastructure/` is the only layer that imports NestJS decorators, Supabase, Prisma, etc.
+- `domain/` must never import from `application/`, `infrastructure/`, NestJS, or Prisma. Domain entities are hand-written aggregates, **not** the types Prisma generates.
+- `application/` imports only from `domain/`. Use cases depend on repository and port interfaces, not implementations.
+- `infrastructure/` is the only layer that imports NestJS decorators and the Prisma client.
+- The Prisma schema and migrations live in a root-level `prisma/` folder (Prisma's convention), separate from `src/`. The generated client is the default `@prisma/client`.
 - Controllers live in `infrastructure/adapters/http/` — they are adapters, not domain logic.
-- Repository implementations in `infrastructure/adapters/persistence/` implement the interfaces defined in `domain/repositories/`.
+- Repository implementations in `infrastructure/adapters/persistence/repositories/` implement the interfaces from `domain/repositories/` using the injected `PrismaService`, and use `persistence/mappers/` to translate Prisma rows ↔ domain aggregates (so Prisma types never leak past this layer).
+- One adapter folder per port category: `persistence/` (prisma client, repositories, mappers, queries, unit-of-work), `security/` (hash, token), `events/` (publisher). Add more as new ports appear.
+- **Two different "interceptor" concepts:** application-level AOP decorators that wrap the use-case contract live in `application/decorators/`; NestJS request/response interceptors live in `infrastructure/adapters/http/interceptors/`. Don't conflate them.
+- Read-model queries (e.g. ranking/leaderboard) return DTOs and live in `persistence/queries/`, separate from aggregate-returning `repositories/`.
 
 ## Bootstrap and Global Validation
 
@@ -93,10 +112,11 @@ Each feature is wired in `infrastructure/modules/`. The controller delegates to 
 ```ts
 // infrastructure/modules/users.module.ts
 @Module({
+  imports: [PrismaModule],
   controllers: [UsersController],
   providers: [
     CreateUserUseCase,
-    { provide: USER_REPOSITORY, useClass: SupabaseUserRepository },
+    { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
   ],
 })
 export class UsersModule {}
@@ -138,17 +158,35 @@ export interface IUserRepository {
   findById(id: string): Promise<User | null>;
 }
 
-// infrastructure/adapters/persistence/repositories/supabase-user.repository.ts
+// infrastructure/adapters/persistence/prisma/prisma.service.ts
 @Injectable()
-export class SupabaseUserRepository implements IUserRepository {
-  async save(user: User): Promise<void> { /* Supabase call */ }
-  async findById(id: string): Promise<User | null> { /* Supabase call */ }
+export class PrismaService extends PrismaClient implements OnModuleInit {
+  async onModuleInit() {
+    await this.$connect();
+  }
+}
+
+// infrastructure/adapters/persistence/repositories/prisma-user.repository.ts
+@Injectable()
+export class PrismaUserRepository implements IUserRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async save(user: User): Promise<void> {
+    const row = UserPrismaMapper.toPersistence(user);
+    await this.prisma.user.upsert({ where: { id: row.id }, create: row, update: row });
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const row = await this.prisma.user.findUnique({ where: { id } });
+    return row ? UserPrismaMapper.toDomain(row) : null;
+  }
 }
 ```
 
 - Controllers are thin HTTP adapters: parse input, call one use case, return the result.
 - Use cases own business flow; they speak domain language and depend on interfaces, not concrete repos.
 - Inject repository implementations via a Symbol token so use cases never import infrastructure.
+- The repository receives `PrismaService` and maps Prisma rows to domain aggregates with a persistence mapper — Prisma types stay inside `persistence/`.
 
 ## DTOs and Validation
 
@@ -237,11 +275,14 @@ ConfigModule.forRoot({
 - Keep config access behind typed helpers or config services.
 - Split dev/staging/prod concerns in config factories instead of branching throughout feature code.
 
-## Persistence and Transactions
+## Persistence and Transactions (Prisma)
 
-- Define repository interfaces (ports) in `domain/repositories/` — no ORM types, only domain entities.
-- Implement those interfaces in `infrastructure/adapters/persistence/repositories/` — this is the only place Supabase, Prisma, or TypeORM imports are allowed.
-- Isolate transactional workflows inside use cases or domain services; controllers must never coordinate multi-step writes directly.
+- Define repository interfaces (ports) in `domain/repositories/` — no Prisma types, only domain entities.
+- Implement those interfaces in `infrastructure/adapters/persistence/repositories/` using the injected `PrismaService` — this is the only place `@prisma/client` imports are allowed.
+- Keep the Prisma schema and migrations in the root-level `prisma/` folder. Run `prisma generate` on install and `prisma migrate` for schema changes; never hand-edit generated client code.
+- Map Prisma rows to domain aggregates in `persistence/mappers/` so generated Prisma model types never leak into `domain/` or `application/`.
+- Wrap multi-step writes in `prisma.$transaction(...)` behind the `IUnidadDeTrabajo`/unit-of-work port (`persistence/unit-of-work/`); use cases coordinate the transaction, controllers never do.
+- Expose a `PrismaModule` that provides and exports `PrismaService` so feature modules can inject it.
 
 ## Testing
 
