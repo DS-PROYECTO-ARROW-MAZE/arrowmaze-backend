@@ -1,0 +1,21 @@
+// Prisma schema for ArrowMaze backend.
+// DB: PostgreSQL (hosted on Supabase). Set DATABASE_URL in .env.
+// Workflow: `npx prisma generate` after install, `npx prisma migrate dev` for schema changes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}

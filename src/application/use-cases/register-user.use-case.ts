@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { User } from '../../domain/entities/user.entity';
-import { I_USER_REPOSITORY } from '../../domain/ports/user.repository.interface';
-import type { IUserRepository } from '../../domain/ports/user.repository.interface';
+import { I_USER_REPOSITORY } from '../../domain/repositories/user.repository.interface';
+import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { RegisterUserDto } from '../dtos/register-user.dto';
 import { randomUUID } from 'crypto';
 
