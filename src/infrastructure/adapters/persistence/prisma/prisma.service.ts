@@ -7,7 +7,13 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    try {
+      await this.$connect();
+      console.log('🚀 Conexión exitosa a la base de datos a través de Prisma.');
+    } catch (error: any) {
+      console.error('⚠️ Alerta: No se pudo conectar a la base de datos de Supabase.');
+      console.error('El backend seguirá corriendo para desarrollo:', error.message);
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
