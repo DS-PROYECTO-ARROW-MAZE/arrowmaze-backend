@@ -19,3 +19,35 @@ model User {
 
   @@map("users")
 }
+
+model Nivel {
+  id              String      @id @default(uuid()) @db.Uuid
+  nombre          String
+  dificultad      String
+  ancho           Int
+  alto            Int
+  baseNivel       Int         @map("base_nivel")
+  kmov            Int
+  ktiempo         Int
+  umbralEstrella1 Int         @map("umbral_estrella_1")
+  umbralEstrella2 Int         @map("umbral_estrella_2")
+  umbralEstrella3 Int         @map("umbral_estrella_3")
+  limiteTiempo    Int?        @map("limite_tiempo")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  celdas          CeldaNivel[]
+
+  @@map("niveles")
+}
+
+model CeldaNivel {
+  id        String @id @default(uuid()) @db.Uuid
+  nivelId   String @map("nivel_id") @db.Uuid
+  x         Int
+  y         Int
+  tipo      String
+  direccion String?
+  nivel     Nivel  @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+
+  @@map("celdas_nivel")
+}
