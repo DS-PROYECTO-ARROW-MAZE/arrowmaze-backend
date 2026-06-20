@@ -8,7 +8,7 @@
 | Tool | Version / Model | Role in the team's workflow |
 | ---- | --------------- | --------------------------- |
 | Claude Code | Sonnet 4.6 (`claude-sonnet-4-6`) & Opus 4.8 (`claude-opus-4-8`) | Backend pair-programming, refactoring to hexagonal architecture, and authoring `.claude` skills |
-| opencode (deepseek-v4) | `opencode/deepseek-v4-free` | Backend pair-programming implementing Ticket 01 (level creation, solvability gate) via TDD cycle |
+| opencode (deepseek-v4) | `opencode/deepseek-v4-free` | Backend pair-programming implementing Tickets 01 and 03 (level creation + update with solvability gate) via TDD cycle |
 
 <!-- DRAFT: confirm — add any other tools the team used (GitHub Copilot, ChatGPT, DeepL, etc.) with version + role, or delete this comment if the table is complete. -->
 
@@ -50,12 +50,21 @@
 - **Modifications made by the team:** Two architectural violations were caught and corrected: (1) NestJS decorators/imports leaked into the application layer — removed and replaced with pure TypeScript dependency injection; (2) test fixture data was initially placed in the domain layer — moved to `shared/__fixtures__/golden-boards.ts` per AGENTS.md conventions.
 - **Lessons learned / limitedness identified:** The AI tends to blur Clean Architecture boundaries, especially importing framework code (NestJS) into application use cases and placing test data in domain aggregates. The TDD cycle helps catch these early, but explicit layer-enforcement linting (per Ticket 07) would prevent them at write time.
 
+### T-005 — Implement Ticket 03: Update level with solvability re-gate
+
+- **Task / problem addressed:** Build `PUT /levels/:id` endpoint that re-validates solvability before persisting updates, preventing soft-locks on existing levels. Required: domain exception for 404, update use case with shared cell-mapping logic, upsert in Prisma repo, request DTO, 404 filter, controller wiring, and e2e tests.
+- **AI tool used:** opencode (deepseek-v4-free)
+- **Prompt / instruction:** "usa la skill tdd-strict e implementa el Ticket 03 — Update level with solvability re-gate siguiendo el mismo enfoque del Ticket 01. Arranca investigando el código existente RECIÉN creado para entender la base sobre la que vamos a construir." (verbatim) — followed by iterative prompts to implement each layer (RED test → GREEN implementation → REFACTOR shared logic).
+- **Result obtained:** Implemented 6 new files and modified 6 existing files across all three Clean Architecture rings. Key deliverables: `ActualizarNivelCasoDeUso` (with shared `mapearCeldasDesdeDto` export), `NivelNoEncontradoException` (→404), `ActualizarNivelDto`/`ActualizarNivelResultadoDto`, `ActualizarNivelRequestDto` (class-validator), `NivelNoEncontradoFilter`, `NivelPrismaMapper.toUpdateArgs`, upsert logic in `PrismaNivelRepository.guardar`, and `PUT /levels/:id` endpoint. 28 unit + 8 e2e tests all pass. Refactored `CrearNivelCasoDeUso` to reuse `mapearCeldasDesdeDto`, eliminating inline duplication.
+- **Modifications made by the team:** The architecture post-analysis identified that `mapearCeldasDesdeDto` was placed inside `actualizar-nivel.use-case.ts` and imported by `crear-nivel.use-case.ts`, creating a cross-use-case coupling. Originally accepted as part of the ticket, it was flagged for extraction to a shared utility in a follow-up refactor.
+- **Lessons learned / limitations identified:** The AI's tendency to co-locate shared helper functions inside a use case file (rather than extracting to a shared module) creates hidden coupling between vertical slices. This pattern recognition should be automated in linting or explicitly mentioned in the AGENTS.md conventions. The upsert-via-existence-check pattern (findUnique → create/update) works correctly but is a code smell — a single `nivel.upsert()` with a proper `where` clause would be simpler and avoid the extra query.
+
 ## 3. Critical Evaluation
 
 ### AI-assisted code share
 
-- **Approximate % of code that was AI-assisted:** ~45% (cumulative across all tickets)
-- **Basis for the estimate:** Ticket 01 alone generated ~85–90% AI-assisted code (domain, application, infrastructure, tests); previous tickets (T-001–T-003) were documentation/skill work. Rough average: (3 doc + 20 code files) / ~23 total files.
+- **Approximate % of code that was AI-assisted:** ~55% (cumulative across all tickets)
+- **Basis for the estimate:** ~40 total `.ts` files in the project. T-004 generated ~85–90% of ~20 source files, T-005 generated ~85–90% of ~12 files (6 new + 6 modified). Previous tickets (T-001–T-003) were documentation/skill work. Cumulative AI-assisted: ~30 out of ~40 tracked files.
 
 ### Incorrect or suboptimal AI results
 
@@ -67,8 +76,12 @@
   - **How it was detected:** Code review — team noticed the boards were not in `shared/__fixtures__/`.
   - **How it was corrected:** Moved board definitions to `src/shared/__fixtures__/golden-boards.ts` and imported them from tests.
 
+- **Case (T-005):** The shared helper `mapearCeldasDesdeDto` was placed inside `actualizar-nivel.use-case.ts` and imported by `crear-nivel.use-case.ts`, coupling two independent vertical slices. A utility function should live in a shared location, not inside a use case.
+  - **How it was detected:** Architecture analysis post-implementation flagged the cross-use-case dependency.
+  - **How it was corrected:** Flagged for refactoring to `src/application/utils/mapear-celdas.ts` — not yet applied.
+
 ### Team reflection
 
-- **Impact on productivity:** Ticket 01 was implemented in a single session with all layers (domain → application → infrastructure → tests) generated by AI, which would have taken several days manually. The TDD cycle kept iterations fast.
-- **Impact on code quality:** High for boilerplate and repetitive patterns (VOs, mappers, DTOs, repository adapters) — AI produces consistent, idiomatic code for standard structures. However, architectural boundary violations require active human oversight; the AI does not inherently respect Clean Architecture layer rules.
-- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices, but layer-enforcement linting (e.g., Ticket 07) is essential to catch boundary violations automatically. The combination of TDD + AI codegen + human code review is effective — keep this workflow for future tickets.
+- **Impact on productivity:** Tickets 01 and 03 were each implemented in single sessions with all layers (domain → application → infrastructure → tests) generated by AI, each would have taken several days manually. The reuse pattern (shared `mapearCeldasDesdeDto`) eliminated duplicated mapping code between create and update use cases in minutes.
+- **Impact on code quality:** High for boilerplate (VOs, DTOs, mappers, repository adapters) and for enforcing the solvability invariant across both create and update paths — no divergence between the two gates. However, the AI co-locates shared helpers inside use-case files rather than extracting them to shared modules, and the upsert-via-existence-check pattern introduces an extra query. Both are design smells that require human oversight.
+- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices including the second slice that mirrors the first. Layer-enforcement linting (Ticket 07) and a stronger shared-utility extraction convention in AGENTS.md would catch the cross-use-case coupling pattern at write time. The TDD + AI codegen + human architecture review workflow remains effective — the architecture review (hexagonal + DDD compliance check) after implementation caught the coupling issue that pure testing did not.
