@@ -33,6 +33,29 @@ export class NivelPrismaMapper {
     };
   }
 
+  static toUpdateArgs(nivel: Nivel): Prisma.NivelUpdateArgs {
+    return {
+      where: { id: nivel.id },
+      data: {
+        nombre: nivel.nombre,
+        dificultad: nivel.dificultad,
+        ancho: nivel.ancho,
+        alto: nivel.alto,
+        baseNivel: nivel.baseNivel,
+        kmov: nivel.kmov,
+        ktiempo: nivel.ktiempo,
+        umbralEstrella1: nivel.umbralEstrella1,
+        umbralEstrella2: nivel.umbralEstrella2,
+        umbralEstrella3: nivel.umbralEstrella3,
+        limiteTiempo: nivel.limiteTiempo ?? null,
+        celdas: {
+          deleteMany: {},
+          create: this.celdasToPersistence(nivel),
+        },
+      },
+    };
+  }
+
   static toDomain(row: NivelPrismaRow): Nivel {
     const celdas = this.celdasMatrixFromRows(row);
 

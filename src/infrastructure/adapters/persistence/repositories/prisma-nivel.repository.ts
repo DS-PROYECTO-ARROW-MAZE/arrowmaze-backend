@@ -9,8 +9,17 @@ export class PrismaNivelRepository implements IRepositorioNivel {
   constructor(private readonly prisma: PrismaService) {}
 
   async guardar(nivel: Nivel): Promise<void> {
-    const data = NivelPrismaMapper.toPersistence(nivel);
-    await this.prisma.nivel.create({ data });
+    const exists = await this.prisma.nivel.findUnique({
+      where: { id: nivel.id },
+      select: { id: true },
+    });
+    if (exists) {
+      const args = NivelPrismaMapper.toUpdateArgs(nivel);
+      await this.prisma.nivel.update(args);
+    } else {
+      const data = NivelPrismaMapper.toPersistence(nivel);
+      await this.prisma.nivel.create({ data });
+    }
   }
 
   async obtenerPorId(id: string): Promise<Nivel | null> {

@@ -1,33 +1,17 @@
 import { IRepositorioNivel } from '../../domain/repositories/nivel.repository.interface';
 import { Nivel } from '../../domain/aggregates/nivel';
 import { DefinicionTablero } from '../../domain/value-objects/definicion-tablero';
-import { FabricaCeldasEstandar, Celda } from '../../domain/value-objects/celda';
-import { Direccion } from '../../domain/value-objects/direccion';
 import { GrafoTablero } from '../../domain/services/grafo-tablero';
 import { esSolvable } from '../../domain/services/solver';
 import { NivelNoSolvableException } from '../../domain/exceptions/nivel-no-solvable.exception';
 import { CrearNivelDto, CrearNivelResultadoDto } from '../dtos/crear-nivel.dto';
+import { mapearCeldasDesdeDto } from './actualizar-nivel.use-case';
 
 export class CrearNivelCasoDeUso {
   constructor(private readonly repositorioNivel: IRepositorioNivel) {}
 
   async execute(dto: CrearNivelDto): Promise<CrearNivelResultadoDto> {
-    const celdas: Celda[][] = dto.celdas.map((fila) =>
-      fila.map((celdaDto) => {
-        switch (celdaDto.tipo) {
-          case 'flecha':
-            return FabricaCeldasEstandar.crearFlecha(
-              celdaDto.direccion as Direccion,
-            );
-          case 'pared':
-            return FabricaCeldasEstandar.crearPared();
-          case 'vacia':
-            return FabricaCeldasEstandar.crearVacia();
-          case 'coleccionable':
-            return FabricaCeldasEstandar.crearColeccionable();
-        }
-      }),
-    );
+    const celdas = mapearCeldasDesdeDto(dto.celdas);
 
     const tablero = new GrafoTablero(dto.ancho, dto.alto, celdas);
     if (!esSolvable(tablero)) {
