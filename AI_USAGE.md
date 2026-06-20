@@ -1,7 +1,7 @@
 # AI Usage Documentation
 
 > Mandatory disclosure of AI use in this repository.
-> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-19
+> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-20
 
 ## 1. Tools Used
 
@@ -9,8 +9,7 @@
 | ---- | --------------- | --------------------------- |
 | Claude Code | Sonnet 4.6 (`claude-sonnet-4-6`) & Opus 4.8 (`claude-opus-4-8`) | Backend pair-programming, refactoring to hexagonal architecture, and authoring `.claude` skills |
 | opencode (deepseek-v4) | `opencode/deepseek-v4-free` | Backend pair-programming implementing Tickets 01 and 03 (level creation + update with solvability gate) via TDD cycle |
-
-<!-- DRAFT: confirm — add any other tools the team used (GitHub Copilot, ChatGPT, DeepL, etc.) with version + role, or delete this comment if the table is complete. -->
+| opencode (deepseek-v4-flash-free) | `opencode/deepseek-v4-flash-free` | Backend pair-programming implementing Ticket 05 (deterministic scoring and stars) plus architecture compliance analysis |
 
 ## 2. Usage Log by Task
 
@@ -59,12 +58,21 @@
 - **Modifications made by the team:** The architecture post-analysis identified that `mapearCeldasDesdeDto` was placed inside `actualizar-nivel.use-case.ts` and imported by `crear-nivel.use-case.ts`, creating a cross-use-case coupling. Originally accepted as part of the ticket, it was flagged for extraction to a shared utility in a follow-up refactor.
 - **Lessons learned / limitations identified:** The AI's tendency to co-locate shared helper functions inside a use case file (rather than extracting to a shared module) creates hidden coupling between vertical slices. This pattern recognition should be automated in linting or explicitly mentioned in the AGENTS.md conventions. The upsert-via-existence-check pattern (findUnique → create/update) works correctly but is a code smell — a single `nivel.upsert()` with a proper `where` clause would be simpler and avoid the extra query.
 
+### T-006 — Implement Ticket 05: Deterministic scoring and stars
+
+- **Task / problem addressed:** Build the deterministic score formula for the ArrowMaze game: `PuntuacionMixta` for timed levels (movements + time bonus), `PuntuacionPorMovimientos` for untimed (movements only), strategy selection via runtime check on `limiteTiempo`, stars rating (1–3) from score thresholds, golden-score fixtures shared with the Dart frontend for cross-repo agreement, and ubiquitous-language guards (`PuntuacionPorTiempo` must not exist).
+- **AI tool used:** opencode (deepseek-v4-flash-free)
+- **Prompt / instruction:** (1) "Lee el fichero .issues/05-deterministic-scoring-and-stars.md. Luego explora el código existente para entender el estado actual del proyecto. Al finalizar, dime cuál es el plan de implementación detallado, paso a paso, indicando qué ficheros crearemos y modificaremos." (verbatim) — (2) "Muy bien, comencemos con el TDD. Crea los tests primero." (verbatim) — (3) "Ahora necesito que usando la información de la AGENTS.md y tus skills hagas una verificación completa de calidad" (verbatim) — (4) "Analiza el ArrowMaze Backend y verifica que se cumpla la regla de dependencia de arquitectura hexagonal y los principios de DDD." (verbatim) — (5) "Usa la skill 'ai-usage-doc' para documentar en el AI_USAGE.md todo el trabajo, los prompts y el resultado de este ticket." (verbatim)
+- **Result obtained:** Implemented 11 new files across all three Clean Architecture rings via strict TDD (Red-Green-Refactor). Key deliverables: `EstrategiaPuntuacion` interface (strategy contract), `PuntuacionMixta` (score = max(0, base − mov·Kmov + segundosRestantes·Ktiempo)), `PuntuacionPorMovimientos` (score = max(0, base − mov·Kmov)), `puntajeConSuelo()` utility, `ResultadoPuntaje` VO with `puntaje + estrellas`, `CalcularPuntuacionCasoDeUso` with strategy selector via `Map<'mixta'|'porMovimientos', EstrategiaPuntuacion>` and stars calculator (3→2→1 star thresholds), 9 golden-score fixtures in `shared/__fixtures__/golden-scores.ts` with agreement test, and ubiquitous-language guard test asserting `PuntuacionPorTiempo` class does not exist. All 62 tests pass (10 suites) with 100% coverage on new code.
+- **Modifications made by the team:** Removed unused `umbral3` parameter from `CalcularPuntuacionCasoDeUso.calcularEstrellas()` after lint flagged it (`@typescript-eslint/no-unused-vars`). Skipped wiring `CalcularPuntuacionCasoDeUso` in NestJS module per ticket guidance ("no new endpoint required — scoring is consumed internally by sync/leaderboard"). The architecture analysis after implementation confirmed zero dependency violations across all layers.
+- **Lessons learned / limitations identified:** The TDD cycle with AI successfully generated the strategy pattern implementation with no architectural violations — a marked improvement over T-004 where NestJS imports leaked into the application layer. The unused parameter (`umbral3`) was caught by lint, not by tests, reinforcing that automated lint verification is essential post-generation. The architecture analysis revealed an anemic domain model (no invariant validation in `Nivel`) which is a DDD smell for a future ticket to address.
+
 ## 3. Critical Evaluation
 
 ### AI-assisted code share
 
-- **Approximate % of code that was AI-assisted:** ~55% (cumulative across all tickets)
-- **Basis for the estimate:** ~40 total `.ts` files in the project. T-004 generated ~85–90% of ~20 source files, T-005 generated ~85–90% of ~12 files (6 new + 6 modified). Previous tickets (T-001–T-003) were documentation/skill work. Cumulative AI-assisted: ~30 out of ~40 tracked files.
+- **Approximate % of code that was AI-assisted:** ~85% (cumulative across all tickets)
+- **Basis for the estimate:** ~48 total `.ts` files in the project. T-004 generated ~85–90% of ~20 source files, T-005 generated ~85–90% of ~12 files (6 new + 6 modified), T-006 generated ~100% of 11 new files (scoring strategies, use case, VOs, fixtures, tests). Previous AI-assisted count: ~30/40. T-006 adds 11 new files → ~41/48 ≈ 85%.
 
 ### Incorrect or suboptimal AI results
 
@@ -79,6 +87,10 @@
 - **Case (T-005):** The shared helper `mapearCeldasDesdeDto` was placed inside `actualizar-nivel.use-case.ts` and imported by `crear-nivel.use-case.ts`, coupling two independent vertical slices. A utility function should live in a shared location, not inside a use case.
   - **How it was detected:** Architecture analysis post-implementation flagged the cross-use-case dependency.
   - **How it was corrected:** Flagged for refactoring to `src/application/utils/mapear-celdas.ts` — not yet applied.
+
+- **Case (T-006):** The unused `umbral3` parameter was included in `CalcularPuntuacionCasoDeUso.calcularEstrellas()`. The method only needs `umbral1` and `umbral2` (3-star and 2-star thresholds) since 1 star is the implicit floor. The extra parameter was dead code.
+  - **How it was detected:** ESLint `@typescript-eslint/no-unused-vars` flagged it on `npm run lint`.
+  - **How it was corrected:** Removed `umbral3` from the `calcularEstrellas` signature and its call site.
 
 ### Team reflection
 
