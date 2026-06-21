@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { LevelsController } from '../adapters/http/controllers/levels.controller';
 import { CrearNivelCasoDeUso } from '../../application/use-cases/crear-nivel.use-case';
 import { ActualizarNivelCasoDeUso } from '../../application/use-cases/actualizar-nivel.use-case';
+import { ObtenerNivelCasoDeUso } from '../../application/use-cases/obtener-nivel.use-case';
 import {
   IRepositorioNivel,
   NIVEL_REPOSITORY,
@@ -25,6 +26,11 @@ import { NivelNoEncontradoFilter } from '../adapters/http/filters/nivel-no-encon
       provide: ActualizarNivelCasoDeUso,
       useFactory: (repo: IRepositorioNivel) =>
         new ActualizarNivelCasoDeUso(repo),
+      inject: [NIVEL_REPOSITORY],
+    },
+    {
+      provide: ObtenerNivelCasoDeUso,
+      useFactory: (repo: IRepositorioNivel) => new ObtenerNivelCasoDeUso(repo),
       inject: [NIVEL_REPOSITORY],
     },
     {

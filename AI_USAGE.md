@@ -1,7 +1,7 @@
 # AI Usage Documentation
 
 > Mandatory disclosure of AI use in this repository.
-> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-20
+> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-21
 
 ## 1. Tools Used
 
@@ -9,7 +9,7 @@
 | ---- | --------------- | --------------------------- |
 | Claude Code | Sonnet 4.6 (`claude-sonnet-4-6`) & Opus 4.8 (`claude-opus-4-8`) | Backend pair-programming, refactoring to hexagonal architecture, and authoring `.claude` skills |
 | opencode (deepseek-v4) | `opencode/deepseek-v4-free` | Backend pair-programming implementing Tickets 01 and 03 (level creation + update with solvability gate) via TDD cycle |
-| opencode (deepseek-v4-flash-free) | `opencode/deepseek-v4-flash-free` | Backend pair-programming implementing Ticket 05 (deterministic scoring and stars) plus architecture compliance analysis |
+| opencode (deepseek-v4-flash-free) | `opencode/deepseek-v4-flash-free` | Backend pair-programming implementing Ticket 04 (GET /levels/:id with re-validation), Ticket 05 (deterministic scoring and stars), and fixing missing registration infrastructure |
 
 ## 2. Usage Log by Task
 
@@ -67,12 +67,30 @@
 - **Modifications made by the team:** Removed unused `umbral3` parameter from `CalcularPuntuacionCasoDeUso.calcularEstrellas()` after lint flagged it (`@typescript-eslint/no-unused-vars`). Skipped wiring `CalcularPuntuacionCasoDeUso` in NestJS module per ticket guidance ("no new endpoint required — scoring is consumed internally by sync/leaderboard"). The architecture analysis after implementation confirmed zero dependency violations across all layers.
 - **Lessons learned / limitations identified:** The TDD cycle with AI successfully generated the strategy pattern implementation with no architectural violations — a marked improvement over T-004 where NestJS imports leaked into the application layer. The unused parameter (`umbral3`) was caught by lint, not by tests, reinforcing that automated lint verification is essential post-generation. The architecture analysis revealed an anemic domain model (no invariant validation in `Nivel`) which is a DDD smell for a future ticket to address.
 
+### T-007 — Implement Ticket 04: Serve level by id with re-validation gate
+
+- **Task / problem addressed:** Build `GET /levels/:id` endpoint that loads a level by UUID, re-validates solvability via `GrafoTablero.esSolvable()` before returning (defence in depth per ADR-0001), maps to `DefinicionNivelDto` including the full `celdas` matrix, and returns 404 for unknown ids or 422 for corrupted/unsolvable stored levels. Required: use case with re-validation, response DTO with stable field names for Pact contract, presenter, controller endpoint, and e2e tests.
+- **AI tool used:** opencode (deepseek-v4-flash-free)
+- **Prompt / instruction:** (1) "Explora el código existente para entender el estado actual del proyecto y la base sobre la que vamos a construir para el Ticket 04" (paraphrased) — (2) "Implement the use case test first (RED), then the use case (GREEN), using strict TDD. The use case should load by id, re-validate solvability, and return a DTO with celdas." (paraphrased) — (3) "Now implement the presenter/DTO layer with its tests. DefinicionNivelDto must include celdas array and stable field names." (paraphrased) — (4) "Wire the HTTP endpoint: GET /levels/:id in LevelsController, register ObtenerNivelCasoDeUso in LevelsModule, write e2e tests covering 200, 404, and celdas in response." (paraphrased)
+- **Result obtained:** Implemented 5 new files and modified 3 existing files across all three Clean Architecture rings. Key deliverables: `ObtenerNivelCasoDeUso` (loads from repo, re-validates solvability via `GrafoTablero` + `esSolvable()`, maps to DTO), `DefinicionNivelDto` (response DTO with `celdas: CeldaDto[][]`), `NivelPresenter` (domain → DTO mapping), `@Get(':id')` endpoint in `LevelsController`, use-case factory provider in `LevelsModule`, re-validation defence-in-depth (same code path as create/update). 14 unit tests (6 use case + 5 presenter + 3 e2e) pass.
+- **Modifications made by the team:** The use case does inline mapping (consistent with existing `CrearNivelCasoDeUso` / `ActualizarNivelCasoDeUso` patterns) rather than calling `NivelPresenter` — the presenter was created in infrastructure as a reference/documentation artifact but not wired. This preserves Clean Architecture (application must not import infrastructure). Accepted as generated.
+- **Lessons learned / limitations identified:** The re-validation gate on read is the third implementation of the same `GrafoTablero` + `esSolvable()` pattern (create, update, now read), confirming ADR-0001's defence-in-depth strategy is consistently enforced. No architectural violations were introduced — a marked improvement from T-004 where framework imports leaked into the application layer.
+
+### T-008 — Fix pre-existing failing register-user test (missing domain dependencies)
+
+- **Task / problem addressed:** Resolve `register-user.use-case.spec.ts` test suite failure caused by missing `User` entity, repository interface, DTO, and Prisma mapper files that the registration pipeline depends on. The test suite failed at import time with `Cannot find module '../../domain/entities/user.entity'`.
+- **AI tool used:** opencode (deepseek-v4-flash-free)
+- **Prompt / instruction:** "Resuelve el test fallido que dio npm run test: FAIL src/application/use-cases/register-user.use-case.spec.ts — Cannot find module '../../domain/entities/user.entity'" (verbatim)
+- **Result obtained:** Created 4 missing files that unblocked the full test suite: `domain/entities/user.entity.ts` (simple entity with `id`, `email`, `passwordHash`, `createdAt`), `domain/repositories/user.repository.interface.ts` (interface with `save`, `findByEmail`, `findById` + DI token), `application/dtos/register-user.dto.ts` (`email` + `password`), and `infrastructure/adapters/persistence/mappers/user.prisma.mapper.ts` (to/from Prisma rows). All 14 suites / 79 tests now pass.
+- **Modifications made by the team:** The Prisma mapper initially used raw DB column names (`password_hash`, `created_at`) in its return type — corrected to Prisma's TypeScript field names (`passwordHash`, `createdAt`) to match Prisma input types. Caught during code review before committing.
+- **Lessons learned / limitations identified:** Partial implementation of a vertical slice (the use case and auth module were wired, but core domain files were never created) caused a cascading test failure that only surfaced at import time. The mapper field-name mismatch (DB columns vs Prisma TypeScript input types) is a recurring gotcha — `NivelPrismaMapper` uses `Prisma.NivelCreateInput` typing which would have caught it at compile time. Adding explicit Prisma input-type annotations to mapper return types would prevent this class of error.
+
 ## 3. Critical Evaluation
 
 ### AI-assisted code share
 
-- **Approximate % of code that was AI-assisted:** ~85% (cumulative across all tickets)
-- **Basis for the estimate:** ~48 total `.ts` files in the project. T-004 generated ~85–90% of ~20 source files, T-005 generated ~85–90% of ~12 files (6 new + 6 modified), T-006 generated ~100% of 11 new files (scoring strategies, use case, VOs, fixtures, tests). Previous AI-assisted count: ~30/40. T-006 adds 11 new files → ~41/48 ≈ 85%.
+- **Approximate % of code that was AI-assisted:** ~86% (cumulative across all tickets)
+- **Basis for the estimate:** T-007 adds 5 new files + 3 modified; T-008 adds 4 new files. New total: ~50/57 `.ts` files AI-assisted. Project now has ~57 total `.ts` files (excluding `node_modules`, `dist`, `prisma/migrations`, and config files). AI generated ~86% of these by file count (rough judgment).
 
 ### Incorrect or suboptimal AI results
 
@@ -92,8 +110,12 @@
   - **How it was detected:** ESLint `@typescript-eslint/no-unused-vars` flagged it on `npm run lint`.
   - **How it was corrected:** Removed `umbral3` from the `calcularEstrellas` signature and its call site.
 
+- **Case (T-008):** The `UserPrismaMapper.toPersistence()` return type used raw DB column names (`password_hash`, `created_at`) instead of Prisma's TypeScript field names (`passwordHash`, `createdAt`). This would have caused a runtime error when Prisma received an unexpected property name in the upsert input.
+  - **How it was detected:** Manual code review spotted the mismatch against the `Prisma.UserCreateInput` type.
+  - **How it was corrected:** Changed return object keys to `passwordHash` and `createdAt` to match Prisma's model field names.
+
 ### Team reflection
 
 - **Impact on productivity:** Tickets 01 and 03 were each implemented in single sessions with all layers (domain → application → infrastructure → tests) generated by AI, each would have taken several days manually. The reuse pattern (shared `mapearCeldasDesdeDto`) eliminated duplicated mapping code between create and update use cases in minutes.
-- **Impact on code quality:** High for boilerplate (VOs, DTOs, mappers, repository adapters) and for enforcing the solvability invariant across both create and update paths — no divergence between the two gates. However, the AI co-locates shared helpers inside use-case files rather than extracting them to shared modules, and the upsert-via-existence-check pattern introduces an extra query. Both are design smells that require human oversight.
-- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices including the second slice that mirrors the first. Layer-enforcement linting (Ticket 07) and a stronger shared-utility extraction convention in AGENTS.md would catch the cross-use-case coupling pattern at write time. The TDD + AI codegen + human architecture review workflow remains effective — the architecture review (hexagonal + DDD compliance check) after implementation caught the coupling issue that pure testing did not.
+- **Impact on code quality:** High for boilerplate (VOs, DTOs, mappers, repository adapters) and for enforcing the solvability invariant across all three paths (create, update, read) — no divergence between the three gates, confirming ADR-0001's defence-in-depth strategy. However, the AI co-locates shared helpers inside use-case files rather than extracting them to shared modules, and the upsert-via-existence-check pattern introduces an extra query. Both are design smells that require human oversight. The T-008 mapper field-name bug (raw DB columns vs Prisma TypeScript input types) is a recurring gotcha that explicit type annotations would prevent.
+- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices including the third slice (GET by id) that mirrors the first two with minimal new concepts. The third implementation of the solvability gate on read was generated with zero architectural violations — a clear improvement from T-004. The TDD + AI codegen + human architecture review workflow remains effective; the mapper field-name bug (T-008) was caught by code review, not by tests or lint, reinforcing that human review is still essential even for well-established patterns.
