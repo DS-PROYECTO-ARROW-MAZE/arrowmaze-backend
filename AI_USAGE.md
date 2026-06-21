@@ -1,7 +1,7 @@
 # AI Usage Documentation
 
 > Mandatory disclosure of AI use in this repository.
-> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-20
+> **Project:** ArrowMaze Backend · **Last updated:** 2026-06-21
 
 ## 1. Tools Used
 
@@ -67,12 +67,21 @@
 - **Modifications made by the team:** Removed unused `umbral3` parameter from `CalcularPuntuacionCasoDeUso.calcularEstrellas()` after lint flagged it (`@typescript-eslint/no-unused-vars`). Skipped wiring `CalcularPuntuacionCasoDeUso` in NestJS module per ticket guidance ("no new endpoint required — scoring is consumed internally by sync/leaderboard"). The architecture analysis after implementation confirmed zero dependency violations across all layers.
 - **Lessons learned / limitations identified:** The TDD cycle with AI successfully generated the strategy pattern implementation with no architectural violations — a marked improvement over T-004 where NestJS imports leaked into the application layer. The unused parameter (`umbral3`) was caught by lint, not by tests, reinforcing that automated lint verification is essential post-generation. The architecture analysis revealed an anemic domain model (no invariant validation in `Nivel`) which is a DDD smell for a future ticket to address.
 
+### T-007 — Implement Ticket 02: Harden registration (bcrypt + domain exception)
+
+- **Task / problem addressed:** Upgrade the already-shipped `POST /auth/register` tracer bullet from "works on the happy path" to "production-honest" per `.issues/02-harden-registration-bcrypt.md`: hash passwords with bcrypt behind a port so the application/domain layers never import `bcrypt` directly, and replace the generic `Error` thrown on a duplicate email with a typed domain exception mapped to `409 Conflict`.
+- **AI tool used:** Claude Code (Sonnet 4.6)
+- **Prompt / instruction:** "Use the `tdd-strict` skill and implement Ticket 02 — Harden registration (bcrypt + domain exception), following the same red-green-refactor approach as the previous tickets." (paraphrased — exact transcript from that session not preserved)
+- **Result obtained:** Added `IHashContrasena` port (`application/ports/hash-contrasena.port.ts`), `BcryptHashAdapter` as the sole `bcrypt` import site with config-driven salt rounds, `EmailYaRegistradoException` (domain) and `EmailYaRegistradoExceptionFilter` mapping it to 409, rewired `RegisterUserUseCase` to inject both ports via DI tokens and throw the domain exception instead of `new Error(...)`, `AuthController` + `AuthModule` wiring, and unit + e2e coverage (`register-user.use-case.spec.ts`, `bcrypt-hash.adapter.spec.ts`, `test/auth.e2e-spec.ts`) asserting: duplicate email → 409 with no extra row written, the stored password never equals the plaintext, and the use case's own source contains no `bcrypt` reference. The same session also recreated four supporting files that had been deleted in an earlier "purge boilerplate" commit (`c6bd26e`) — `User` entity, `RegisterUserDto`, `IUserRepository`, `UserPrismaMapper` — which the use case needs to compile.
+- **Modifications made by the team:** <!-- DRAFT: confirm — no manual corrections were identifiable from re-reading the diff after the fact; please confirm or add any you recall from that session. -->
+- **Lessons learned / limitations identified:** (1) The four recreated supporting files were left untracked while the bcrypt commit (`f3e7078`) that depends on them was already committed — anyone checking out that commit alone gets a non-compiling tree; a commit that introduces a dependency should include the files it depends on. (2) The "use case must not import bcrypt" invariant is tested by `fs.readFileSync`-ing the use case's own `.ts` file and regex-matching for `/bcrypt/i` — a clever but brittle white-box test that breaks on file rename and would miss an indirect import; an architecture-boundary lint rule (Ticket 07) would enforce this more robustly than a text-grep test.
+
 ## 3. Critical Evaluation
 
 ### AI-assisted code share
 
-- **Approximate % of code that was AI-assisted:** ~85% (cumulative across all tickets)
-- **Basis for the estimate:** ~48 total `.ts` files in the project. T-004 generated ~85–90% of ~20 source files, T-005 generated ~85–90% of ~12 files (6 new + 6 modified), T-006 generated ~100% of 11 new files (scoring strategies, use case, VOs, fixtures, tests). Previous AI-assisted count: ~30/40. T-006 adds 11 new files → ~41/48 ≈ 85%.
+- **Approximate % of code that was AI-assisted:** ~89% (cumulative across all tickets)
+- **Basis for the estimate:** ~48 total `.ts` files in the project as of T-006 (~41/48 ≈ 85%). T-007 (Ticket 02) adds 10 new files in commit `f3e7078` (port, exception, adapter + spec, controller, filter, module, use-case spec, e2e spec) plus 4 recreated supporting files from the same session (entity, DTO, repository interface, mapper), all AI-generated → ~55/62 ≈ 89%. <!-- DRAFT: confirm — recomputed from file counts, not a team-reviewed figure. -->
 
 ### Incorrect or suboptimal AI results
 
@@ -92,8 +101,16 @@
   - **How it was detected:** ESLint `@typescript-eslint/no-unused-vars` flagged it on `npm run lint`.
   - **How it was corrected:** Removed `umbral3` from the `calcularEstrellas` signature and its call site.
 
+- **Case (T-007):** The commit implementing bcrypt hashing (`f3e7078`) depends on four files (`User` entity, `RegisterUserDto`, `IUserRepository`, `UserPrismaMapper`) that had been deleted by an earlier "purge boilerplate" commit (`c6bd26e`) and were recreated in the same AI session but never staged — leaving the bcrypt commit's dependencies untracked.
+  - **How it was detected:** `git status` on the branch showed the four files as untracked while the commit that imports them was already in history.
+  - **How it was corrected:** Not yet corrected — flagged here pending the team staging and committing these four files.
+
+- **Case (T-007):** The "use case must not import `bcrypt`" invariant (an explicit Definition-of-Done item in Ticket 02) was tested by having `register-user.use-case.spec.ts` read its own source file with `fs.readFileSync` and regex-match for `/bcrypt/i`, rather than via a structural/import-boundary check.
+  - **How it was detected:** Code review while drafting this AI usage entry.
+  - **How it was corrected:** Not yet refactored — flagged for replacement with an architecture-boundary lint rule (Ticket 07) instead of a text-grep test, which is brittle to file renames and blind to indirect imports.
+
 ### Team reflection
 
 - **Impact on productivity:** Tickets 01 and 03 were each implemented in single sessions with all layers (domain → application → infrastructure → tests) generated by AI, each would have taken several days manually. The reuse pattern (shared `mapearCeldasDesdeDto`) eliminated duplicated mapping code between create and update use cases in minutes.
 - **Impact on code quality:** High for boilerplate (VOs, DTOs, mappers, repository adapters) and for enforcing the solvability invariant across both create and update paths — no divergence between the two gates. However, the AI co-locates shared helpers inside use-case files rather than extracting them to shared modules, and the upsert-via-existence-check pattern introduces an extra query. Both are design smells that require human oversight.
-- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices including the second slice that mirrors the first. Layer-enforcement linting (Ticket 07) and a stronger shared-utility extraction convention in AGENTS.md would catch the cross-use-case coupling pattern at write time. The TDD + AI codegen + human architecture review workflow remains effective — the architecture review (hexagonal + DDD compliance check) after implementation caught the coupling issue that pure testing did not.
+- **Overall takeaways:** AI is excellent for rapidly scaffolding full vertical slices including the second slice that mirrors the first. Layer-enforcement linting (Ticket 07) and a stronger shared-utility extraction convention in AGENTS.md would catch the cross-use-case coupling pattern at write time. The TDD + AI codegen + human architecture review workflow remains effective — the architecture review (hexagonal + DDD compliance check) after implementation caught the coupling issue that pure testing did not. T-007 reinforces the same point from a different angle: the port/adapter pattern for `bcrypt` and the domain-exception-to-HTTP-status mapping were both applied cleanly and consistently with prior tickets, but recreating previously-purged files within a feature commit — without staging them — shows that AI sessions need an explicit "is the tree self-consistent" check (e.g. a clean-clone build) before a ticket is considered done.
