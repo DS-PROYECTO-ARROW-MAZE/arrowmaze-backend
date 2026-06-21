@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseFilters } from '@nestjs/common';
 import { RegisterUserUseCase } from '../../../../application/use-cases/register-user.use-case';
-import { RegisterUserDto } from '../../../../application/dtos/register-user.dto';
+import { RegisterUserRequestDto } from '../dtos/register-user-request.dto';
 import { EmailYaRegistradoExceptionFilter } from '../filters/email-ya-registrado-exception.filter';
 
 @Controller('auth')
@@ -9,7 +9,7 @@ export class AuthController {
   constructor(private readonly registerUserUseCase: RegisterUserUseCase) {}
 
   @Post('register')
-  async register(@Body() dto: RegisterUserDto) {
+  async register(@Body() dto: RegisterUserRequestDto) {
     const newUser = await this.registerUserUseCase.execute(dto);
 
     return {
