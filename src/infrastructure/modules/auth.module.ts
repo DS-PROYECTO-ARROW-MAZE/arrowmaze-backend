@@ -77,5 +77,6 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
     JwtAdapter,
     JwtAuthGuard,
   ],
+  exports: [I_PROVEEDOR_SESION, JwtAdapter, JwtAuthGuard],
 })
 export class AuthModule {}

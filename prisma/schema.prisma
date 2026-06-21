@@ -12,10 +12,11 @@ datasource db {
 }
 
 model User {
-  id           String   @id @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String     @id @db.Uuid
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  progresos    Progreso[]
 
   @@map("users")
 }
@@ -36,6 +37,7 @@ model Nivel {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
   celdas          CeldaNivel[]
+  progresos       Progreso[]
 
   @@map("niveles")
 }
@@ -50,4 +52,23 @@ model CeldaNivel {
   nivel     Nivel  @relation(fields: [nivelId], references: [id], onDelete: Cascade)
 
   @@map("celdas_nivel")
+}
+
+// Progreso: a re-scored, completed run for one player/level (PRD §6.3). Batches of these
+// persist atomically via RepositorioProgreso.guardarLote inside a repository-scoped
+// $transaction (ADR-0003) — never via a Unit of Work.
+model Progreso {
+  id                String   @id @default(uuid()) @db.Uuid
+  jugadorId         String   @map("jugador_id") @db.Uuid
+  nivelId           String   @map("nivel_id") @db.Uuid
+  movimientos       Int
+  segundosRestantes Int?     @map("segundos_restantes")
+  puntaje           Int
+  estrellas         Int
+  completadoEn      DateTime @map("completado_en")
+  createdAt         DateTime @default(now()) @map("created_at")
+  jugador           User     @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  nivel             Nivel    @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+
+  @@map("progresos")
 }
