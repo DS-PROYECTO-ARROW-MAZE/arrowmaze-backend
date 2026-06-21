@@ -60,7 +60,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/domain/**/*.ts'],
+    files: ['src/domain/**/*.ts', 'src/application/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -68,13 +68,45 @@ export default tseslint.config(
           patterns: [
             {
               group: ['@nestjs/*'],
-              message: 'Domain layer must not import from NestJS.',
+              message: 'Domain/application layers must not import from NestJS.',
             },
             {
               group: ['@prisma/client'],
-              message: 'Domain layer must not import from Prisma.',
+              message: 'Domain/application layers must not import from Prisma.',
+            },
+            {
+              group: ['bcrypt'],
+              message: 'Domain/application layers must not import bcrypt directly.',
+            },
+            {
+              group: ['rxjs', 'rxjs/*'],
+              message: 'Domain/application layers must not import RxJS (ADR-0004).',
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    // PRD §4 avoid-list (ubiquitous-language guard) — see src/__arch__/forbidden-symbols.ts
+    // for the test-level scanner and the rationale behind each banned identifier.
+    files: ['src/**/*.ts'],
+    rules: {
+      'id-denylist': [
+        'error',
+        'CeldaSalida',
+        'Composite',
+        'NivelFacil',
+        'NivelMedio',
+        'NivelDificil',
+        'PuntuacionPorTiempo',
+        'CargadorNiveles',
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Identifier[name=/^Celda.*Decorator.*$/]',
+          message: 'No Decorator pattern over Celda (PRD §4 "cell decorators").',
         },
       ],
     },
