@@ -54,4 +54,44 @@ describe('Auth (e2e)', () => {
     const rows = await prisma.user.findMany({ where: { email } });
     expect(rows).toHaveLength(1);
   });
+
+  it('should_return_a_token_when_logging_in_with_valid_credentials', async () => {
+    // Act
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+
+    // Assert
+    expect(typeof response.body.token).toBe('string');
+    expect(response.body.token.split('.')).toHaveLength(3);
+  });
+
+  it('should_return_401_when_logging_in_with_a_wrong_password', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'wrong-password' })
+      .expect(401);
+  });
+
+  it('should_return_401_when_probing_the_protected_route_without_a_token', async () => {
+    await request(app.getHttpServer()).get('/auth/me').expect(401);
+  });
+
+  it('should_return_200_and_the_principal_when_probing_the_protected_route_with_the_issued_token', async () => {
+    // Arrange
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    const token = loginResponse.body.token as string;
+
+    // Act & Assert
+    const probeResponse = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(probeResponse.body.principal.email).toBe(email);
+  });
 });
