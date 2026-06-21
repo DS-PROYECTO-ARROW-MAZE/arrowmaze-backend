@@ -169,4 +169,43 @@ describe('Levels (e2e)', () => {
       .send({ nombre: 'incomplete' })
       .expect(400);
   });
+
+  it('GET /levels/:id returns 200 with level DTO for existing id', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/levels/${idExistente}`)
+      .expect(200);
+
+    expect(res.body.id).toBe(idExistente);
+    expect(res.body.nombre).toBe('Nivel Original');
+    expect(res.body.dificultad).toBe('FACIL');
+    expect(res.body.ancho).toBe(1);
+    expect(res.body.alto).toBe(1);
+    expect(res.body.baseNivel).toBe(1000);
+    expect(res.body.kmov).toBe(10);
+    expect(res.body.ktiempo).toBe(5);
+    expect(res.body.umbralEstrella1).toBe(800);
+    expect(res.body.umbralEstrella2).toBe(600);
+    expect(res.body.umbralEstrella3).toBe(400);
+  });
+
+  it('GET /levels/:id includes celdas in the response', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/levels/${idExistente}`)
+      .expect(200);
+
+    expect(res.body.celdas).toBeDefined();
+    expect(Array.isArray(res.body.celdas)).toBe(true);
+    expect(res.body.celdas[0][0]).toEqual({
+      tipo: 'flecha',
+      direccion: 'DERECHA',
+    });
+  });
+
+  it('GET /levels/:id returns 404 for unknown id', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/levels/unknown-id')
+      .expect(404);
+
+    expect(res.body.message).toContain('no encontrado');
+  });
 });
