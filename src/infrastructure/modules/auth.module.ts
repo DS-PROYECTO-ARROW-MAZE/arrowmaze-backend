@@ -10,12 +10,15 @@ import { IHashContrasena } from '../../application/ports/hash-contrasena.port';
 import { I_HASH_CONTRASENA } from '../../application/ports/hash-contrasena.port';
 import { IProveedorSesion } from '../../application/ports/proveedor-sesion.port';
 import { I_PROVEEDOR_SESION } from '../../application/ports/proveedor-sesion.port';
+import { IPublicadorEventos } from '../../domain/events/publicador-eventos.interface';
+import { I_PUBLICADOR_EVENTOS } from '../../domain/events/publicador-eventos.interface';
 import { PrismaUserRepository } from '../adapters/persistence/repositories/prisma-user.repository';
 import { PrismaModule } from '../adapters/persistence/prisma/prisma.module';
 import { BcryptHashAdapter } from '../adapters/security/bcrypt-hash.adapter';
 import { JwtAdapter } from '../adapters/security/jwt.adapter';
 import { ProveedorSesionAdapter } from '../adapters/security/proveedor-sesion.adapter';
 import { JwtAuthGuard } from '../adapters/http/guards/jwt-auth.guard';
+import { PublicadorEventosAdapter } from '../adapters/messaging/publicador-eventos.adapter';
 
 const DEFAULT_JWT_SECRET = 'dev-secret-change-me';
 const DEFAULT_JWT_EXPIRES_IN = '1h';
@@ -39,9 +42,12 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
   providers: [
     {
       provide: RegisterUserUseCase,
-      useFactory: (repo: IUserRepository, hasher: IHashContrasena) =>
-        new RegisterUserUseCase(repo, hasher),
-      inject: [I_USER_REPOSITORY, I_HASH_CONTRASENA],
+      useFactory: (
+        repo: IUserRepository,
+        hasher: IHashContrasena,
+        publicadorEventos: IPublicadorEventos,
+      ) => new RegisterUserUseCase(repo, hasher, publicadorEventos),
+      inject: [I_USER_REPOSITORY, I_HASH_CONTRASENA, I_PUBLICADOR_EVENTOS],
     },
     {
       provide: LoginUseCase,
@@ -63,6 +69,10 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
     {
       provide: I_PROVEEDOR_SESION,
       useClass: ProveedorSesionAdapter,
+    },
+    {
+      provide: I_PUBLICADOR_EVENTOS,
+      useClass: PublicadorEventosAdapter,
     },
     JwtAdapter,
     JwtAuthGuard,
