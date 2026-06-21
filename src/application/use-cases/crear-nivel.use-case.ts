@@ -5,9 +5,15 @@ import { GrafoTablero } from '../../domain/services/grafo-tablero';
 import { esSolvable } from '../../domain/services/solver';
 import { NivelNoSolvableException } from '../../domain/exceptions/nivel-no-solvable.exception';
 import { CrearNivelDto, CrearNivelResultadoDto } from '../dtos/crear-nivel.dto';
+import { ICasoDeUso } from '../ports/caso-de-uso.interface';
 import { mapearCeldasDesdeDto } from './actualizar-nivel.use-case';
 
-export class CrearNivelCasoDeUso {
+// Implements ICasoDeUso so the ticket-09 decorator stack (metrics/logging/security)
+// can wrap this use case by composition, without editing its body (ADR-0004).
+export class CrearNivelCasoDeUso implements ICasoDeUso<
+  CrearNivelDto,
+  CrearNivelResultadoDto
+> {
   constructor(private readonly repositorioNivel: IRepositorioNivel) {}
 
   async execute(dto: CrearNivelDto): Promise<CrearNivelResultadoDto> {
