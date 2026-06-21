@@ -7,8 +7,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime / app connections go through Supabase's transaction pooler (port 6543, pgbouncer=true).
+  url       = env("DATABASE_URL")
+  // CLI migrations & `db push` use a direct/session connection (port 5432) so prepared
+  // statements work — the pooler in transaction mode breaks them ("s1 already exists").
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
