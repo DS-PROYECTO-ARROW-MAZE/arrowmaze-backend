@@ -15,6 +15,7 @@ describe('PrismaNivelRepository', () => {
   ];
   const definicion = DefinicionTablero.crear(1, 1, celdasSolvable);
   const nivel = Nivel.crear({
+    id: 'nivel-test',
     nombre: 'Test',
     dificultad: 'FACIL',
     definicionTablero: definicion,

@@ -58,11 +58,9 @@ describe('ActualizarNivelCasoDeUso', () => {
 
   beforeEach(() => {
     repo = {
-      guardar: jest
-        .fn<(...args: any[]) => Promise<void>>()
-        .mockResolvedValue(undefined),
+      guardar: jest.fn<Promise<void>, [Nivel]>().mockResolvedValue(undefined),
       obtenerPorId: jest
-        .fn<(...args: any[]) => Promise<any>>()
+        .fn<Promise<Nivel | null>, [string]>()
         .mockResolvedValue(nivelExistente),
     };
     useCase = new ActualizarNivelCasoDeUso(repo);

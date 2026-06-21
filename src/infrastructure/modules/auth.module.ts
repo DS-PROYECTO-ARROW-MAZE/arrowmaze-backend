@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import type { JwtSignOptions } from '@nestjs/jwt';
 import { AuthController } from '../adapters/http/controllers/auth.controller';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -19,6 +20,11 @@ import { JwtAdapter } from '../adapters/security/jwt.adapter';
 import { ProveedorSesionAdapter } from '../adapters/security/proveedor-sesion.adapter';
 import { JwtAuthGuard } from '../adapters/http/guards/jwt-auth.guard';
 import { PublicadorEventosAdapter } from '../adapters/messaging/publicador-eventos.adapter';
+import { IdentityModule } from './identity.module';
+import {
+  IGeneradorId,
+  I_GENERADOR_ID,
+} from '../../application/ports/generador-id.port';
 
 const DEFAULT_JWT_SECRET = 'dev-secret-change-me';
 const DEFAULT_JWT_EXPIRES_IN = '1h';
@@ -26,14 +32,14 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
 @Module({
   imports: [
     PrismaModule,
+    IdentityModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') ?? DEFAULT_JWT_SECRET,
         signOptions: {
-          expiresIn:
-            configService.get<string>('JWT_EXPIRES_IN') ??
-            DEFAULT_JWT_EXPIRES_IN,
+          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ??
+            DEFAULT_JWT_EXPIRES_IN) as JwtSignOptions['expiresIn'],
         },
       }),
     }),
@@ -46,8 +52,14 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
         repo: IUserRepository,
         hasher: IHashContrasena,
         publicadorEventos: IPublicadorEventos,
-      ) => new RegisterUserUseCase(repo, hasher, publicadorEventos),
-      inject: [I_USER_REPOSITORY, I_HASH_CONTRASENA, I_PUBLICADOR_EVENTOS],
+        generadorId: IGeneradorId,
+      ) => new RegisterUserUseCase(repo, hasher, publicadorEventos, generadorId),
+      inject: [
+        I_USER_REPOSITORY,
+        I_HASH_CONTRASENA,
+        I_PUBLICADOR_EVENTOS,
+        I_GENERADOR_ID,
+      ],
     },
     {
       provide: LoginUseCase,

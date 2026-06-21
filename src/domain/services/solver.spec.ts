@@ -2,11 +2,12 @@ import { GrafoTablero } from './grafo-tablero';
 import { FabricaCeldasEstandar } from '../value-objects/celda';
 import { Direccion } from '../value-objects/direccion';
 import { esSolvable } from './solver';
-import { goldenBoards } from '../../shared/__fixtures__/golden-boards';
+import {
+  goldenBoards,
+  GoldenBoard,
+} from '../../shared/__fixtures__/golden-boards';
 
-function tableroDesdeGolden(
-  golden: (typeof goldenBoards)['solvable'],
-): GrafoTablero {
+function tableroDesdeGolden(golden: GoldenBoard): GrafoTablero {
   const celdas = golden.celdas.map((fila) =>
     fila.map((gc) => {
       switch (gc.tipo) {

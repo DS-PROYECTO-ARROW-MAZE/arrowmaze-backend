@@ -50,8 +50,8 @@ describe('ObtenerNivelCasoDeUso', () => {
 
   beforeEach((): void => {
     repo = {
-      guardar: jest.fn<(...args: any[]) => Promise<void>>(),
-      obtenerPorId: jest.fn<(...args: any[]) => Promise<any>>(),
+      guardar: jest.fn<Promise<void>, [Nivel]>(),
+      obtenerPorId: jest.fn<Promise<Nivel | null>, [string]>(),
     };
     useCase = new ObtenerNivelCasoDeUso(repo);
   });

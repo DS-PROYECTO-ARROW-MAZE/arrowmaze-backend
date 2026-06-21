@@ -10,6 +10,7 @@ function crearNivelUntimed(
   const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
   const definicion = DefinicionTablero.crear(1, 1, celdas);
   return Nivel.crear({
+    id: 'nivel-test',
     nombre: 'Test',
     dificultad: 'FACIL',
     definicionTablero: definicion,

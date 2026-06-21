@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-
 export interface ProgresoParams {
   jugadorId: string;
   nivelId: string;
@@ -8,7 +6,9 @@ export interface ProgresoParams {
   estrellas: number;
   completadoEn: Date;
   segundosRestantes?: number;
-  id?: string;
+  // Identity is assigned by the application layer (via IGeneradorId) and passed in — the
+  // domain never reaches for Node `crypto`, keeping this factory pure and deterministic.
+  id: string;
 }
 
 export class Progreso {
@@ -25,7 +25,7 @@ export class Progreso {
 
   static crear(params: ProgresoParams): Progreso {
     return new Progreso(
-      params.id ?? randomUUID(),
+      params.id,
       params.jugadorId,
       params.nivelId,
       params.movimientos,

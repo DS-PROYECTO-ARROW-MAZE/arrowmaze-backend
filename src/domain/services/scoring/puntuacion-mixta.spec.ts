@@ -15,6 +15,7 @@ function crearNivelTimed(
   const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
   const definicion = DefinicionTablero.crear(1, 1, celdas);
   return Nivel.crear({
+    id: 'nivel-test',
     nombre: 'Test',
     dificultad: 'MEDIO',
     definicionTablero: definicion,

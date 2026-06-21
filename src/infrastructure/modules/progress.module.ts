@@ -14,9 +14,14 @@ import { PrismaProgresoRepository } from '../adapters/persistence/repositories/p
 import { PrismaNivelRepository } from '../adapters/persistence/repositories/prisma-nivel.repository';
 import { PrismaModule } from '../adapters/persistence/prisma/prisma.module';
 import { AuthModule } from './auth.module';
+import { IdentityModule } from './identity.module';
+import {
+  IGeneradorId,
+  I_GENERADOR_ID,
+} from '../../application/ports/generador-id.port';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, IdentityModule],
   controllers: [ProgressController],
   providers: [
     {
@@ -24,13 +29,15 @@ import { AuthModule } from './auth.module';
       useFactory: (
         repositorioProgreso: IRepositorioProgreso,
         repositorioNivel: IRepositorioNivel,
+        generadorId: IGeneradorId,
       ) =>
         new SincronizarProgresoCasoDeUso(
           repositorioProgreso,
           repositorioNivel,
           new CalcularPuntuacionCasoDeUso(),
+          generadorId,
         ),
-      inject: [PROGRESO_REPOSITORY, NIVEL_REPOSITORY],
+      inject: [PROGRESO_REPOSITORY, NIVEL_REPOSITORY, I_GENERADOR_ID],
     },
     {
       provide: PROGRESO_REPOSITORY,

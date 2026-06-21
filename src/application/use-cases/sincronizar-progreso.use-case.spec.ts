@@ -12,6 +12,7 @@ import { Direccion } from '../../domain/value-objects/direccion';
 import { ResultadoPuntaje } from '../../domain/value-objects/resultado-puntaje';
 import { Progreso } from '../../domain/entities/progreso';
 import { SincronizarProgresoDto } from '../dtos/sincronizar-progreso.dto';
+import { IGeneradorId } from '../ports/generador-id.port';
 
 describe('SincronizarProgresoCasoDeUso', () => {
   let useCase: SincronizarProgresoCasoDeUso;
@@ -63,10 +64,15 @@ describe('SincronizarProgresoCasoDeUso', () => {
       obtenerPorId: jest.fn().mockResolvedValue(nivel),
     };
     calculadora = new CalcularPuntuacionCasoDeUso();
+    let secuencia = 0;
+    const generadorId: IGeneradorId = {
+      generar: () => `progreso-generado-${++secuencia}`,
+    };
     useCase = new SincronizarProgresoCasoDeUso(
       repositorioProgreso,
       repositorioNivel,
       calculadora,
+      generadorId,
     );
   });
 

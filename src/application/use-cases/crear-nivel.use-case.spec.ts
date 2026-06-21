@@ -2,6 +2,7 @@ import { CrearNivelCasoDeUso } from './crear-nivel.use-case';
 import { IRepositorioNivel } from '../../domain/repositories/nivel.repository.interface';
 import { CrearNivelDto } from '../dtos/crear-nivel.dto';
 import { Nivel } from '../../domain/aggregates/nivel';
+import { IGeneradorId } from '../ports/generador-id.port';
 
 describe('CrearNivelCasoDeUso', () => {
   let useCase: CrearNivelCasoDeUso;
@@ -23,12 +24,11 @@ describe('CrearNivelCasoDeUso', () => {
 
   beforeEach((): void => {
     repo = {
-      guardar: jest
-        .fn<(...args: any[]) => Promise<void>>()
-        .mockResolvedValue(undefined),
-      obtenerPorId: jest.fn<(...args: any[]) => Promise<any>>(),
+      guardar: jest.fn<Promise<void>, [Nivel]>().mockResolvedValue(undefined),
+      obtenerPorId: jest.fn<Promise<Nivel | null>, [string]>(),
     };
-    useCase = new CrearNivelCasoDeUso(repo);
+    const generadorId: IGeneradorId = { generar: () => 'nivel-generado-1' };
+    useCase = new CrearNivelCasoDeUso(repo, generadorId);
   });
 
   it('creates a level and persists it for a solvable board', async () => {

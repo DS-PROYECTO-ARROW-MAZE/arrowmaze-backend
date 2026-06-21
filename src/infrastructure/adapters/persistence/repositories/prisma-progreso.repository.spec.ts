@@ -7,6 +7,7 @@ describe('PrismaProgresoRepository', () => {
   let mockTransaction: jest.Mock;
 
   const progreso1 = Progreso.crear({
+    id: 'progreso-1',
     jugadorId: 'jugador-1',
     nivelId: 'nivel-1',
     movimientos: 3,
@@ -16,6 +17,7 @@ describe('PrismaProgresoRepository', () => {
     completadoEn: new Date('2026-01-01T00:00:00.000Z'),
   });
   const progreso2 = Progreso.crear({
+    id: 'progreso-2',
     jugadorId: 'jugador-1',
     nivelId: 'nivel-2',
     movimientos: 8,

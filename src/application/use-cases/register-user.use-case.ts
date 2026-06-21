@@ -4,7 +4,7 @@ import { EmailYaRegistradoException } from '../../domain/exceptions/email-ya-reg
 import type { IHashContrasena } from '../ports/hash-contrasena.port';
 import type { IPublicadorEventos } from '../../domain/events/publicador-eventos.interface';
 import { RegisterUserDto } from '../dtos/register-user.dto';
-import { randomUUID } from 'crypto';
+import type { IGeneradorId } from '../ports/generador-id.port';
 
 export class RegisterUserUseCase {
   // Aplicando DIP: Dependemos de la abstracción (Interfaz), no de la implementación concreta
@@ -12,6 +12,7 @@ export class RegisterUserUseCase {
     private readonly userRepository: IUserRepository,
     private readonly hashContrasena: IHashContrasena,
     private readonly publicadorEventos: IPublicadorEventos,
+    private readonly generadorId: IGeneradorId,
   ) {}
 
   async execute(dto: RegisterUserDto): Promise<User> {
@@ -27,7 +28,7 @@ export class RegisterUserUseCase {
     // plano, usada por los mappers, nunca lo emite).
     const passwordHash = await this.hashContrasena.hash(dto.password);
     const newUser = User.registrar(
-      randomUUID(),
+      this.generadorId.generar(),
       dto.email,
       passwordHash,
       new Date(),

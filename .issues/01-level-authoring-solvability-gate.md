@@ -8,6 +8,7 @@
 > other level/scoring/progress ticket depends on. We build them here **inside a working
 > feature** (`POST /levels`) rather than as a horizontal "domain-only" sprint.
 
+
 ## User story
 
 > **C3 — Author a level (backend gate).** *As Ops, I publish a level and trust it

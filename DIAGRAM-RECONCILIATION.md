@@ -345,3 +345,77 @@ because removing a whole path only clears cells.
 - Backend diagrams, DTO contracts and Pact tests are untouched: the path model is a client-side
   domain/representation change. If level **definitions** are later served with path data, revisit
   `DefinicionNivelDto` / `CargadorNivel` then (out of scope for FRONTEND-01).
+
+---
+
+## 9. Identity generation extracted to a port (BACKEND architecture audit)
+
+**Context.** The strict Clean-Architecture audit found the backend domain factories
+`Nivel.crear(...)` and `Progreso.crear(...)` reaching for Node's `crypto.randomUUID()`
+directly (and `RegisterUserUseCase` doing the same in the app layer). That couples the
+domain to the Node runtime and makes entity construction non-deterministic under test.
+Identity is now minted through an injected port, so the domain is 100% pure TypeScript and
+the concrete UUID source lives in the outer ring. This is a **backend** change: apply in
+**P1 + P3 r4**. Frontend (P2/P3 r5/r7/r8/P4) is unaffected.
+
+### 9.1 ADD — `IGeneradorId` «interface» (application port)
+
+Create **`IGeneradorId` «interface»** in the backend application-ports package, beside
+`IHashContrasena` / `IMedidorMetricas` / `IRegistro` / `ProveedorSesion`:
+- Method: `+ generar(): String`.
+- It is a DIP seam: use cases depend on it (`..> IGeneradorId`), never on `crypto`.
+
+### 9.2 ADD — `CryptoGeneradorIdAdapter` «Adapter» (infrastructure)
+
+Create **`CryptoGeneradorIdAdapter` «Service» «Adapter»** in the backend infrastructure
+package that **realizes `IGeneradorId`** (`..|>`). It is the single place Node `crypto`
+(`randomUUID`) is allowed on the backend — analogous to `BcryptHashAdapter` realizing
+`IHashContrasena`. Bound to the port token via an `IdentityModule` (DI wiring detail; not a
+diagram element).
+
+### 9.3 MODIFY — domain factories require an injected id (Q-purity)
+
+- **`Nivel` «Modelo»**: `crear(params)` no longer generates an id; `params.id: String` is now
+  **required** and supplied by the caller. Drop any `..> crypto` / `randomUUID` note on `Nivel`.
+- **`Progreso` «Modelo»**: same change to `crear(params)` — `id: String` required, no `crypto`.
+- Both stay pure value/aggregate constructions with **no** outward dependency.
+
+### 9.4 MODIFY — use cases hold the new port
+
+Add the field + dependency on the three writing use cases (P1 + P3 r4):
+- **`CrearNivelCasoDeUso`** `- _generadorId: IGeneradorId` (`..> IGeneradorId`); calls
+  `generadorId.generar()` and passes the id into `Nivel.crear({ id, ... })`.
+- **`SincronizarProgresoCasoDeUso`** `- _generadorId: IGeneradorId` (`..> IGeneradorId`);
+  one `generar()` per `Progreso.crear({ id, ... })`.
+- **`RegisterUserUseCase` / `RegistrarJugadorCasoDeUso`** `- _generadorId: IGeneradorId`
+  (`..> IGeneradorId`); replaces the inline `randomUUID()` feeding `User.registrar(id, ...)`.
+- **`ActualizarNivelCasoDeUso`** is **unchanged** — it reuses the *existing* level id (update
+  path), it never generates.
+
+### 9.5 Pattern crib delta (§7 table)
+
+Add a row: **DIP / Port** → `IGeneradorId` (identity), realized by `CryptoGeneradorIdAdapter`.
+Extend the existing DIP row's port list to include `IGeneradorId` alongside `Tablero`,
+`CargadorNivel`, `ProveedorSesion`, `IConsultaRanking`.
+
+### 9.6 Boilerplate removal (no diagram element)
+
+The default NestJS scaffolding `AppController` / `AppService` (the `getHello()` "ArrowMaze API"
+route) was deleted from `src/` root, along with its `app.e2e-spec.ts`. These were never modeled
+in the chart — listed here only so the repo↔diagram inventory stays exact. **No diagram action.**
+
+### 9.7 New architecture guard (no diagram element)
+
+A guard `infrastructure-only-framework.spec.ts` now fails the build if any `@nestjs/*` import
+appears outside `infrastructure/` (allow-listing only the `main.ts` / `app.module.ts`
+composition root). It complements the existing `domain-purity` / `application-no-prisma` guards
+by catching framework leakage parked at `src/` root. **No diagram action.**
+
+### 9.8 Caveats
+
+- `IGeneradorId` is the **backend** identity port. It is distinct from any frontend id scheme;
+  do not merge it with the frontend `Trayectoria.id`/`CeldaFlecha.idFlecha` integer ids (§8),
+  which are authoring/runtime indices, not persistence identities.
+- Node `crypto` remains a sanctioned import in exactly one backend file
+  (`CryptoGeneradorIdAdapter`); the domain-purity guard's forbidden list may optionally add
+  `'crypto'` once every domain/app `crypto` usage is gone (it now is) to lock this in.

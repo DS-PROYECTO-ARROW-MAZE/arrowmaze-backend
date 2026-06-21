@@ -8,6 +8,7 @@ import { User } from '../../domain/entities/user.entity';
 import { JugadorRegistradoEvent } from '../../domain/events/jugador-registrado.event';
 import { EmailYaRegistradoException } from '../../domain/exceptions/email-ya-registrado.exception';
 import { RegisterUserDto } from '../dtos/register-user.dto';
+import { IGeneradorId } from '../ports/generador-id.port';
 
 describe('RegisterUserUseCase', () => {
   let saveMock: jest.Mock;
@@ -40,10 +41,12 @@ describe('RegisterUserUseCase', () => {
     const publicadorEventos: IPublicadorEventos = {
       publicar: publicarMock,
     };
+    const generadorId: IGeneradorId = { generar: () => 'jugador-generado-1' };
     useCase = new RegisterUserUseCase(
       userRepository,
       hashContrasena,
       publicadorEventos,
+      generadorId,
     );
   });
 

@@ -7,6 +7,7 @@ import { NivelNoSolvableException } from '../../domain/exceptions/nivel-no-solva
 import { Posicion } from '../../domain/value-objects/posicion';
 import { Celda } from '../../domain/value-objects/celda';
 import { DefinicionNivelDto } from '../dtos/definicion-nivel.dto';
+import { CeldaDto } from '../dtos/crear-nivel.dto';
 
 export class ObtenerNivelCasoDeUso {
   constructor(private readonly repositorioNivel: IRepositorioNivel) {}
@@ -56,13 +57,10 @@ export class ObtenerNivelCasoDeUso {
     };
   }
 
-  private mapearCeldasADto(nivel: Nivel): {
-    tipo: string;
-    direccion?: string;
-  }[][] {
-    const resultado: { tipo: string; direccion?: string }[][] = [];
+  private mapearCeldasADto(nivel: Nivel): CeldaDto[][] {
+    const resultado: CeldaDto[][] = [];
     for (let y = 0; y < nivel.alto; y++) {
-      const fila: { tipo: string; direccion?: string }[] = [];
+      const fila: CeldaDto[] = [];
       for (let x = 0; x < nivel.ancho; x++) {
         const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y));
         fila.push({

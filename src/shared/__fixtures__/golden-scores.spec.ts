@@ -9,6 +9,7 @@ function crearNivelParaGolden(g: (typeof goldenScores)[number]): Nivel {
   const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
   const definicion = DefinicionTablero.crear(1, 1, celdas);
   return Nivel.crear({
+    id: `nivel-${g.nombre}`,
     nombre: g.nombre,
     dificultad: 'FACIL',
     definicionTablero: definicion,

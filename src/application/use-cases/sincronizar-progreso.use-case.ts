@@ -8,6 +8,7 @@ import {
   SincronizarProgresoResultadoDto,
 } from '../dtos/sincronizar-progreso.dto';
 import { ICasoDeUso } from '../ports/caso-de-uso.interface';
+import { IGeneradorId } from '../ports/generador-id.port';
 
 // Implements ICasoDeUso so the ticket-09 decorator stack can wrap this use case by
 // composition (ADR-0004), same as CrearNivelCasoDeUso.
@@ -19,6 +20,7 @@ export class SincronizarProgresoCasoDeUso implements ICasoDeUso<
     private readonly repositorioProgreso: IRepositorioProgreso,
     private readonly repositorioNivel: IRepositorioNivel,
     private readonly calcularPuntuacionCasoDeUso: CalcularPuntuacionCasoDeUso,
+    private readonly generadorId: IGeneradorId,
   ) {}
 
   async execute(
@@ -42,6 +44,7 @@ export class SincronizarProgresoCasoDeUso implements ICasoDeUso<
 
       progresos.push(
         Progreso.crear({
+          id: this.generadorId.generar(),
           jugadorId: dto.jugadorId,
           nivelId: entrada.nivelId,
           movimientos: entrada.movimientos,

@@ -12,6 +12,10 @@ export const FRAMEWORK_FORBIDDEN_IMPORT_PREFIXES: readonly string[] = [
   'pino',
   '@sentry/',
   'prom-client',
+  // Node runtime primitive: identity generation (randomUUID) is reached through the
+  // IGeneradorId port; the only sanctioned `crypto` import is CryptoGeneradorIdAdapter,
+  // which lives in infrastructure and is not scanned by the domain/application guards.
+  'crypto',
 ];
 
 /**

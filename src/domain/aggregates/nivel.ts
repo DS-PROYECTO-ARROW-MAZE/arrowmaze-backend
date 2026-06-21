@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { DefinicionTablero } from '../value-objects/definicion-tablero';
 
 export interface CrearNivelParams {
@@ -14,7 +13,9 @@ export interface CrearNivelParams {
   umbralEstrella2: number;
   umbralEstrella3: number;
   limiteTiempo?: number;
-  id?: string;
+  // Identity is assigned by the application layer (via IGeneradorId) and passed in — the
+  // domain never reaches for Node `crypto`, keeping this factory pure and deterministic.
+  id: string;
 }
 
 export class Nivel {
@@ -36,7 +37,7 @@ export class Nivel {
 
   static crear(params: CrearNivelParams): Nivel {
     return new Nivel(
-      params.id ?? randomUUID(),
+      params.id,
       params.nombre,
       params.dificultad,
       params.definicionTablero,

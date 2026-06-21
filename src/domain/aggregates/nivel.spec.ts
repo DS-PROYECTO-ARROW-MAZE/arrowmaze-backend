@@ -11,6 +11,7 @@ describe('Nivel', () => {
 
   it('creates a Nivel with valid data', () => {
     const nivel = Nivel.crear({
+      id: 'nivel-test',
       nombre: 'Test Level',
       dificultad: 'FACIL',
       definicionTablero: definicion,
@@ -41,6 +42,7 @@ describe('Nivel', () => {
 
   it('creates a Nivel with limiteTiempo', () => {
     const nivel = Nivel.crear({
+      id: 'nivel-timed',
       nombre: 'Timed Level',
       dificultad: 'MEDIO',
       definicionTablero: definicion,

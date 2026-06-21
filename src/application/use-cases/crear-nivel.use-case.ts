@@ -6,6 +6,7 @@ import { esSolvable } from '../../domain/services/solver';
 import { NivelNoSolvableException } from '../../domain/exceptions/nivel-no-solvable.exception';
 import { CrearNivelDto, CrearNivelResultadoDto } from '../dtos/crear-nivel.dto';
 import { ICasoDeUso } from '../ports/caso-de-uso.interface';
+import { IGeneradorId } from '../ports/generador-id.port';
 import { mapearCeldasDesdeDto } from './actualizar-nivel.use-case';
 
 // Implements ICasoDeUso so the ticket-09 decorator stack (metrics/logging/security)
@@ -14,7 +15,10 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
   CrearNivelDto,
   CrearNivelResultadoDto
 > {
-  constructor(private readonly repositorioNivel: IRepositorioNivel) {}
+  constructor(
+    private readonly repositorioNivel: IRepositorioNivel,
+    private readonly generadorId: IGeneradorId,
+  ) {}
 
   async execute(dto: CrearNivelDto): Promise<CrearNivelResultadoDto> {
     const celdas = mapearCeldasDesdeDto(dto.celdas);
@@ -27,6 +31,7 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
     const definicion = DefinicionTablero.crear(dto.ancho, dto.alto, celdas);
 
     const nivel = Nivel.crear({
+      id: this.generadorId.generar(),
       nombre: dto.nombre,
       dificultad: dto.dificultad,
       definicionTablero: definicion,

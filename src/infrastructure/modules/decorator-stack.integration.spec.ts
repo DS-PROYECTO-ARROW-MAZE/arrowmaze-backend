@@ -15,6 +15,10 @@ import {
 } from '../../application/ports/proveedor-sesion.port';
 import { ICasoDeUso } from '../../application/ports/caso-de-uso.interface';
 import {
+  IGeneradorId,
+  I_GENERADOR_ID,
+} from '../../application/ports/generador-id.port';
+import {
   CrearNivelDto,
   CrearNivelResultadoDto,
 } from '../../application/dtos/crear-nivel.dto';
@@ -82,9 +86,14 @@ async function compilarModuloDePrueba(proveedorSesion: IProveedorSesion) {
       { provide: I_REGISTRO, useValue: registro },
       { provide: I_PROVEEDOR_SESION, useValue: proveedorSesion },
       {
+        provide: I_GENERADOR_ID,
+        useValue: { generar: () => 'nivel-generado-test' } as IGeneradorId,
+      },
+      {
         provide: CrearNivelCasoDeUso,
-        useFactory: (repo: IRepositorioNivel) => new CrearNivelCasoDeUso(repo),
-        inject: [NIVEL_REPOSITORY],
+        useFactory: (repo: IRepositorioNivel, generadorId: IGeneradorId) =>
+          new CrearNivelCasoDeUso(repo, generadorId),
+        inject: [NIVEL_REPOSITORY, I_GENERADOR_ID],
       },
       {
         provide: CASO_DE_USO_CREAR_NIVEL_DECORADO,
