@@ -7,10 +7,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAdapter } from '../../security/jwt.adapter';
-import {
-  I_PROVEEDOR_SESION,
-  IProveedorSesion,
-} from '../../../../application/ports/proveedor-sesion.port';
+import { I_PROVEEDOR_SESION } from '../../../../application/ports/proveedor-sesion.port';
+import type { IProveedorSesion } from '../../../../application/ports/proveedor-sesion.port';
 
 const BEARER_PREFIX = 'Bearer ';
 

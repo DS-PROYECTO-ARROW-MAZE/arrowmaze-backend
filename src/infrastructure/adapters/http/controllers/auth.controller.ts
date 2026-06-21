@@ -9,10 +9,8 @@ import {
 } from '@nestjs/common';
 import { RegisterUserUseCase } from '../../../../application/use-cases/register-user.use-case';
 import { LoginUseCase } from '../../../../application/use-cases/login.use-case';
-import {
-  I_PROVEEDOR_SESION,
-  IProveedorSesion,
-} from '../../../../application/ports/proveedor-sesion.port';
+import { I_PROVEEDOR_SESION } from '../../../../application/ports/proveedor-sesion.port';
+import type { IProveedorSesion } from '../../../../application/ports/proveedor-sesion.port';
 import { RegisterUserRequestDto } from '../dtos/register-user-request.dto';
 import { LoginRequestDto } from '../dtos/login-request.dto';
 import { EmailYaRegistradoExceptionFilter } from '../filters/email-ya-registrado-exception.filter';

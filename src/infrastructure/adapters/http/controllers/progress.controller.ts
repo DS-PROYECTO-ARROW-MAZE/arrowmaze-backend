@@ -8,10 +8,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SincronizarProgresoCasoDeUso } from '../../../../application/use-cases/sincronizar-progreso.use-case';
-import {
-  I_PROVEEDOR_SESION,
-  IProveedorSesion,
-} from '../../../../application/ports/proveedor-sesion.port';
+import { I_PROVEEDOR_SESION } from '../../../../application/ports/proveedor-sesion.port';
+import type { IProveedorSesion } from '../../../../application/ports/proveedor-sesion.port';
 import { SincronizarProgresoRequestDto } from '../dtos/sincronizar-progreso-request.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
