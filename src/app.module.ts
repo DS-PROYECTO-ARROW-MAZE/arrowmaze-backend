@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { LevelsModule } from './infrastructure/modules/levels.module';
 import { AuthModule } from './infrastructure/modules/auth.module';
 import { ProgressModule } from './infrastructure/modules/progress.module';
+import { LeaderboardModule } from './infrastructure/modules/leaderboard.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ProgressModule } from './infrastructure/modules/progress.module';
     LevelsModule,
     AuthModule,
     ProgressModule,
+    LeaderboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
