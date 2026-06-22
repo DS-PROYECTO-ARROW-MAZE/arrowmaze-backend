@@ -419,3 +419,63 @@ by catching framework leakage parked at `src/` root. **No diagram action.**
 - Node `crypto` remains a sanctioned import in exactly one backend file
   (`CryptoGeneradorIdAdapter`); the domain-purity guard's forbidden list may optionally add
   `'crypto'` once every domain/app `crypto` usage is gone (it now is) to lock this in.
+
+## 10. Enhancement batch — levels, geometry, scoring, high-score (BACKEND tickets 12–17)
+
+> **Plan only — no diagram edits applied yet.** This section is the *checklist* of Lucid
+> deltas required once backend tickets 12–17 land. It follows the same DELETE / ADD / MODIFY
+> grammar as §1–§9. Cross-repo twins live in the frontend DR §11. Per [[lucid-arrowmaze-doc]]
+> the Lucid API cannot edit class compartments, so member-level changes below are **by-hand**.
+
+### 10.1 MODIFY — `Progreso` gains a uniqueness invariant (ticket 13, high-score)
+
+- Annotate the `Progreso` «Entidad»/persistence box with the composite key
+  **`«unique» (jugadorId, nivelId)`** — one best row per player/level.
+- Note on the `RepositorioProgreso` → `Progreso` relationship: `guardarLote` is now an
+  **upsert-best** (strictly-greater `puntaje`), not insert-many. No new box; annotate the
+  existing edge / operation.
+
+### 10.2 MODIFY — `DefinicionTablero` carries a shape mask + arrow-length invariant (ticket 14)
+
+- Add to `DefinicionTablero` compartment: `mascara` (playable-position set) and the
+  invariant note **"rejects unsolvable **and** any length-1 arrow"**.
+- ADD exception box `NivelNoSolvableException`'s sibling **`FlechaLongitudInvalidaException`**
+  «exception» with a dependency from `DefinicionTablero`.
+- Annotate `Solver`: raycast/edge detection are **mask-aware** (absent ≠ `CeldaVacia`).
+
+### 10.3 MODIFY — `DefinicionNivel`/`Nivel` gain `numero` + `esBonus` (ticket 15)
+
+- Add fields `numero: int` and `esBonus: bool` to the `DefinicionNivel` (and/or `Nivel`)
+  compartment; annotate invariant **"timed iff numero ≥ 10; bonus ⇒ no time/score"**.
+- ADD exception box **`ReglaTiempoNivelException`** «exception».
+- On the scoring cluster: annotate `CalcularPuntuacionUseCase` with a **third branch**
+  (bonus → non-scoring result). Do **not** add `PuntuacionPorTiempo` (still avoid-listed).
+
+### 10.4 ADD — complexity profile + catalog read side (ticket 16)
+
+- ADD `PerfilDificultad` «servicio dominio» (pure: `numero → {cells, arrows}` targets);
+  dependency from the seed/authoring path. Mirrors frontend's profile (agreement note).
+- ADD read-side query port **`IListarNiveles`** «interface» + adapter `ListarNivelesPrisma`
+  «Adapter», and `NivelResumenDto`. Place beside `IConsultaRanking` in the read-side cluster
+  (same CQRS-lite stereotype). `GET /levels` (catalog) added to the controller note.
+
+### 10.5 MODIFY — scoring star step becomes proportional (ticket 17)
+
+- Annotate `CalcularPuntuacionUseCase` / `ResultadoPuntaje`: `Estrellas` is a **proportional**
+  function of `Puntaje / referencia`, not absolute `umbralesEstrellas` lookup. Note the
+  golden-fixture regeneration as a cross-repo agreement obligation (frontend DR §11.5).
+
+### 10.6 No diagram element (ticket 12, P1 bug)
+
+- The progress-sync fix is a contract/wiring correction (DTO field reconciliation, auth,
+  commit). It touches no structural box — **annotate** the `progress.controller.ts` /
+  `SincronizarProgresoDto` note with the canonical field set once decided. No new shapes.
+
+### 10.7 Caveats
+
+- §10.1's uniqueness changes the leaderboard's input cardinality (one row per player/level);
+  confirm the §4.5 cache aspect / ranking projection notes still read true (they do — top-N
+  ordering is unchanged, de-dup is now structural).
+- The shape `mascara` (§10.2) is a **backend** authoring concept; keep it consistent with the
+  frontend "absent position" concept (frontend DR §11.1) — same idea, do not introduce two
+  vocabularies.
