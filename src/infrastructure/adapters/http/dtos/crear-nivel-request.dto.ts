@@ -11,8 +11,8 @@ import { Type } from 'class-transformer';
 
 export class CeldaRequestDto {
   @IsString()
-  @IsIn(['flecha', 'pared', 'vacia', 'coleccionable'])
-  tipo!: 'flecha' | 'pared' | 'vacia' | 'coleccionable';
+  @IsIn(['flecha', 'pared', 'vacia', 'coleccionable', 'ausente'])
+  tipo!: 'flecha' | 'pared' | 'vacia' | 'coleccionable' | 'ausente';
 
   @IsOptional()
   @IsString()

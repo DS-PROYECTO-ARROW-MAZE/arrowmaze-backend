@@ -24,8 +24,11 @@ describe('SincronizarProgresoCasoDeUso', () => {
     id: 'nivel-1',
     nombre: 'Nivel 1',
     dificultad: 'FACIL',
-    definicionTablero: DefinicionTablero.crear(1, 1, [
-      [FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)],
+    definicionTablero: DefinicionTablero.crear(2, 1, [
+      [
+        FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+        FabricaCeldasEstandar.crearVacia(),
+      ],
     ]),
     ancho: 1,
     alto: 1,

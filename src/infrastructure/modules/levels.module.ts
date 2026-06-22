@@ -12,6 +12,7 @@ import { PrismaNivelRepository } from '../adapters/persistence/repositories/pris
 import { PrismaModule } from '../adapters/persistence/prisma/prisma.module';
 import { NivelNoSolvableFilter } from '../adapters/http/filters/nivel-no-solvable.filter';
 import { NivelNoEncontradoFilter } from '../adapters/http/filters/nivel-no-encontrado.filter';
+import { FlechaLongitudInvalidaFilter } from '../adapters/http/filters/flecha-longitud-invalida.filter';
 import { IdentityModule } from './identity.module';
 import {
   IGeneradorId,
@@ -50,6 +51,10 @@ import {
     {
       provide: APP_FILTER,
       useClass: NivelNoEncontradoFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: FlechaLongitudInvalidaFilter,
     },
   ],
 })

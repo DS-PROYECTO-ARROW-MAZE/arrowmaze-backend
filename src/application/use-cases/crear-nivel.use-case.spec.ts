@@ -11,9 +11,9 @@ describe('CrearNivelCasoDeUso', () => {
   const dtoValido: CrearNivelDto = {
     nombre: 'Mi Nivel',
     dificultad: 'FACIL',
-    ancho: 1,
+    ancho: 2,
     alto: 1,
-    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
+    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
     baseNivel: 1000,
     kmov: 10,
     ktiempo: 5,
@@ -84,7 +84,7 @@ describe('CrearNivelCasoDeUso', () => {
           { tipo: 'pared' },
           { tipo: 'vacia' },
           { tipo: 'coleccionable' },
-          { tipo: 'flecha', direccion: 'ARRIBA' },
+          { tipo: 'flecha', direccion: 'ABAJO' },
         ],
         [
           { tipo: 'vacia' },

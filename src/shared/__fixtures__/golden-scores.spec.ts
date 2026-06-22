@@ -6,8 +6,13 @@ import { CalcularPuntuacionCasoDeUso } from '../../application/use-cases/calcula
 import { goldenScores } from './golden-scores';
 
 function crearNivelParaGolden(g: (typeof goldenScores)[number]): Nivel {
-  const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
-  const definicion = DefinicionTablero.crear(1, 1, celdas);
+  const celdas = [
+    [
+      FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+      FabricaCeldasEstandar.crearVacia(),
+    ],
+  ];
+  const definicion = DefinicionTablero.crear(2, 1, celdas);
   return Nivel.crear({
     id: `nivel-${g.nombre}`,
     nombre: g.nombre,

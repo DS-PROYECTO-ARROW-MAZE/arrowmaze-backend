@@ -81,6 +81,8 @@ export function mapearCeldasDesdeDto(celdasDto: CeldaDto[][]): Celda[][] {
           return FabricaCeldasEstandar.crearVacia();
         case 'coleccionable':
           return FabricaCeldasEstandar.crearColeccionable();
+        case 'ausente':
+          return FabricaCeldasEstandar.crearAusente();
       }
     }),
   );

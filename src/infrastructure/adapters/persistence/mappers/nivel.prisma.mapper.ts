@@ -94,6 +94,9 @@ export class NivelPrismaMapper {
     for (let y = 0; y < nivel.alto; y++) {
       for (let x = 0; x < nivel.ancho; x++) {
         const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y));
+        // Absent positions of a shaped board are stored as the absence of a row, never as
+        // a filler cell — so a sparse board round-trips without inventing cells.
+        if (celda.tipo === 'ausente') continue;
         result.push({
           x,
           y,
@@ -106,12 +109,11 @@ export class NivelPrismaMapper {
   }
 
   private static celdasMatrixFromRows(row: NivelPrismaRow): Celda[][] {
-    const maxY = Math.max(...row.celdas.map((c) => c.y), 0);
-    const maxX = Math.max(...row.celdas.map((c) => c.x), 0);
-
-    const matrix: Celda[][] = Array.from({ length: maxY + 1 }, () =>
-      Array.from({ length: maxX + 1 }, () =>
-        FabricaCeldasEstandar.crearVacia(),
+    // The grid spans the full ancho x alto bounding box. Positions with no persisted row
+    // are absent (outside the playable shape), reconstructing the mask on load.
+    const matrix: Celda[][] = Array.from({ length: row.alto }, () =>
+      Array.from({ length: row.ancho }, () =>
+        FabricaCeldasEstandar.crearAusente(),
       ),
     );
 

@@ -19,6 +19,8 @@ function tableroDesdeGolden(golden: GoldenBoard): GrafoTablero {
           return FabricaCeldasEstandar.crearVacia();
         case 'coleccionable':
           return FabricaCeldasEstandar.crearColeccionable();
+        case 'ausente':
+          return FabricaCeldasEstandar.crearAusente();
       }
     }),
   );
@@ -117,6 +119,51 @@ describe('Solver', () => {
         ],
       ];
       const tablero = new GrafoTablero(3, 1, celdas);
+      expect(esSolvable(tablero)).toBe(true);
+    });
+
+    it('ray exits when it reaches an absent cell, ignoring walls beyond the mask', () => {
+      // flecha -> vacia -> ausente -> pared. The ray leaves the playable region at the
+      // absent cell before it can reach the wall, so the arrow exits and the board solves.
+      const celdas = [
+        [
+          FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+          FabricaCeldasEstandar.crearVacia(),
+          FabricaCeldasEstandar.crearAusente(),
+          FabricaCeldasEstandar.crearPared(),
+        ],
+      ];
+      const tablero = new GrafoTablero(4, 1, celdas);
+      expect(esSolvable(tablero)).toBe(true);
+    });
+
+    it('treats absent differently from empty: empty stays transparent up to a wall', () => {
+      // Same layout but the third cell is empty (transparent) instead of absent, so the
+      // ray keeps going and is blocked by the wall: unsolvable.
+      const celdas = [
+        [
+          FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+          FabricaCeldasEstandar.crearVacia(),
+          FabricaCeldasEstandar.crearVacia(),
+          FabricaCeldasEstandar.crearPared(),
+        ],
+      ];
+      const tablero = new GrafoTablero(4, 1, celdas);
+      expect(esSolvable(tablero)).toBe(false);
+    });
+
+    it('returns true for a golden solvable triangle board', () => {
+      const tablero = tableroDesdeGolden(goldenBoards.triangleSolvable);
+      expect(esSolvable(tablero)).toBe(true);
+    });
+
+    it('returns false for a golden unsolvable triangle board', () => {
+      const tablero = tableroDesdeGolden(goldenBoards.triangleUnsolvable);
+      expect(esSolvable(tablero)).toBe(false);
+    });
+
+    it('returns true for a golden solvable heart board', () => {
+      const tablero = tableroDesdeGolden(goldenBoards.heartSolvable);
       expect(esSolvable(tablero)).toBe(true);
     });
   });

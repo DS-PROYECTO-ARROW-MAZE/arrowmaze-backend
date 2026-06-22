@@ -17,7 +17,19 @@ export interface Coleccionable {
   readonly tipo: 'coleccionable';
 }
 
-export type Celda = CeldaFlecha | CeldaPared | CeldaVacia | Coleccionable;
+// A position inside the bounding box that is NOT part of the playable region (shaped
+// boards). Distinct from CeldaVacia, which is present-but-transparent: an absent position
+// behaves as if it does not exist — a ray reaching it has left the shape and exits.
+export interface CeldaAusente {
+  readonly tipo: 'ausente';
+}
+
+export type Celda =
+  | CeldaFlecha
+  | CeldaPared
+  | CeldaVacia
+  | Coleccionable
+  | CeldaAusente;
 
 export class FabricaCeldasEstandar {
   static crearFlecha(direccion: Direccion): CeldaFlecha {
@@ -34,5 +46,9 @@ export class FabricaCeldasEstandar {
 
   static crearColeccionable(): Coleccionable {
     return { tipo: 'coleccionable' };
+  }
+
+  static crearAusente(): CeldaAusente {
+    return { tipo: 'ausente' };
   }
 }

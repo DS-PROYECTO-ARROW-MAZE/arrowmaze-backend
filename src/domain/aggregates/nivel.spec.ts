@@ -5,9 +5,12 @@ import { Direccion } from '../value-objects/direccion';
 
 describe('Nivel', () => {
   const celdasSolvable = [
-    [FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)],
+    [
+      FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+      FabricaCeldasEstandar.crearVacia(),
+    ],
   ];
-  const definicion = DefinicionTablero.crear(1, 1, celdasSolvable);
+  const definicion = DefinicionTablero.crear(2, 1, celdasSolvable);
 
   it('creates a Nivel with valid data', () => {
     const nivel = Nivel.crear({

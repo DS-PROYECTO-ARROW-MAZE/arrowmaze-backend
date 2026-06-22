@@ -11,6 +11,7 @@ import { Nivel } from '../src/domain/aggregates/nivel';
 import { DefinicionTablero } from '../src/domain/value-objects/definicion-tablero';
 import { FabricaCeldasEstandar } from '../src/domain/value-objects/celda';
 import { Direccion } from '../src/domain/value-objects/direccion';
+import { Posicion } from '../src/domain/value-objects/posicion';
 
 describe('Levels (e2e)', () => {
   let app: INestApplication<App>;
@@ -22,7 +23,7 @@ describe('Levels (e2e)', () => {
     id: idExistente,
     nombre: 'Nivel Original',
     dificultad: 'FACIL',
-    definicionTablero: DefinicionTablero.crear(1, 1, [
+    definicionTablero: DefinicionTablero.restaurar(1, 1, [
       [FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)],
     ]),
     ancho: 1,
@@ -70,9 +71,9 @@ describe('Levels (e2e)', () => {
   const solvableBoard = {
     nombre: 'Test Level',
     dificultad: 'FACIL',
-    ancho: 1,
+    ancho: 2,
     alto: 1,
-    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
+    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
     baseNivel: 1000,
     kmov: 10,
     ktiempo: 5,
@@ -92,6 +93,31 @@ describe('Levels (e2e)', () => {
     ],
   };
 
+  // Heart-shaped playable region: the corners/notch are absent and persist as no row.
+  const shapedSolvableBoard = {
+    ...solvableBoard,
+    nombre: 'Heart Level',
+    ancho: 3,
+    alto: 3,
+    celdas: [
+      [{ tipo: 'vacia' }, { tipo: 'ausente' }, { tipo: 'vacia' }],
+      [
+        { tipo: 'vacia' },
+        { tipo: 'flecha', direccion: 'ABAJO' },
+        { tipo: 'vacia' },
+      ],
+      [{ tipo: 'ausente' }, { tipo: 'vacia' }, { tipo: 'ausente' }],
+    ],
+  };
+
+  // Single-cell arrow: solvable (it exits immediately) but violates arrow-length >= 2.
+  const singleCellArrowBoard = {
+    ...solvableBoard,
+    ancho: 1,
+    alto: 1,
+    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
+  };
+
   it('POST /levels with solvable board returns 201', async () => {
     const res = await request(app.getHttpServer())
       .post('/levels')
@@ -101,6 +127,32 @@ describe('Levels (e2e)', () => {
     expect(res.body.id).toBeDefined();
     expect(res.body.nombre).toBe('Test Level');
     expect(mockRepo.guardar).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /levels with a shaped (heart) solvable board returns 201', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(shapedSolvableBoard)
+      .expect(201);
+
+    expect(res.body.id).toBeDefined();
+    expect(res.body.nombre).toBe('Heart Level');
+    expect(mockRepo.guardar).toHaveBeenCalledTimes(1);
+    // The persisted aggregate keeps absent positions as the absence of cells, not filler.
+    const nivelGuardado = mockRepo.guardar.mock.calls[0][0];
+    expect(
+      nivelGuardado.definicionTablero.celdaEn(new Posicion(1, 0)).tipo,
+    ).toBe('ausente');
+  });
+
+  it('POST /levels with a single-cell arrow returns 422 and persists nothing', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(singleCellArrowBoard)
+      .expect(422);
+
+    expect(res.body.message).toContain('longitud');
+    expect(mockRepo.guardar).not.toHaveBeenCalled();
   });
 
   it('POST /levels with unsolvable board returns 422', async () => {
