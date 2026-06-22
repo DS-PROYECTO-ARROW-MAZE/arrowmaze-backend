@@ -118,6 +118,86 @@ describe('Levels (e2e)', () => {
     celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
   };
 
+  // A timed level needs an ordinal >= 10 AND a limiteTiempo (PRD §3 rule table).
+  const timedLevel10 = {
+    ...solvableBoard,
+    nombre: 'Timed Level 10',
+    numero: 10,
+    limiteTiempo: 90,
+  };
+
+  // numero >= 10 without a limiteTiempo violates the timed-by-ordinal rule.
+  const untimedLevel12 = {
+    ...solvableBoard,
+    nombre: 'Untimed Level 12',
+    numero: 12,
+  };
+
+  // numero 1-9 must not declare a limiteTiempo.
+  const timedLevel3 = {
+    ...solvableBoard,
+    nombre: 'Timed Level 3',
+    numero: 3,
+    limiteTiempo: 60,
+  };
+
+  // Bonus level: time/score do not apply, so ordinal/timer rules are exempt.
+  const bonusLevel = {
+    ...solvableBoard,
+    nombre: 'Bonus Level',
+    numero: 5,
+    esBonus: true,
+    limiteTiempo: 30,
+  };
+
+  it('POST /levels with a numero>=10 level missing limiteTiempo returns 422', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(untimedLevel12)
+      .expect(422);
+
+    expect(res.body.message).toContain('tiempo');
+    expect(mockRepo.guardar).not.toHaveBeenCalled();
+  });
+
+  it('POST /levels with a numero 1-9 level carrying limiteTiempo returns 422', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(timedLevel3)
+      .expect(422);
+
+    expect(res.body.message).toContain('tiempo');
+    expect(mockRepo.guardar).not.toHaveBeenCalled();
+  });
+
+  it('POST /levels with a valid timed level 10 returns 201 and persists the ordinal', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(timedLevel10)
+      .expect(201);
+
+    expect(res.body.numero).toBe(10);
+    expect(res.body.limiteTiempo).toBe(90);
+    expect(mockRepo.guardar).toHaveBeenCalledTimes(1);
+    const nivelGuardado = mockRepo.guardar.mock.calls[0][0];
+    expect(nivelGuardado.numero).toBe(10);
+  });
+
+  it('POST /levels with a bonus level returns 201, persists the flag, and is non-scoring', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/levels')
+      .send(bonusLevel)
+      .expect(201);
+
+    expect(res.body.esBonus).toBe(true);
+    // Time does not apply to bonus levels, so the limiteTiempo is dropped.
+    expect(res.body.limiteTiempo).toBeUndefined();
+    expect(mockRepo.guardar).toHaveBeenCalledTimes(1);
+    const nivelGuardado = mockRepo.guardar.mock.calls[0][0];
+    expect(nivelGuardado.esBonus).toBe(true);
+    expect(nivelGuardado.esPuntuable).toBe(false);
+  });
+
   it('POST /levels with solvable board returns 201', async () => {
     const res = await request(app.getHttpServer())
       .post('/levels')

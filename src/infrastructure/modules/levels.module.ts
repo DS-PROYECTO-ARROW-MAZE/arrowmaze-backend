@@ -13,6 +13,8 @@ import { PrismaModule } from '../adapters/persistence/prisma/prisma.module';
 import { NivelNoSolvableFilter } from '../adapters/http/filters/nivel-no-solvable.filter';
 import { NivelNoEncontradoFilter } from '../adapters/http/filters/nivel-no-encontrado.filter';
 import { FlechaLongitudInvalidaFilter } from '../adapters/http/filters/flecha-longitud-invalida.filter';
+import { ReglaTiempoNivelFilter } from '../adapters/http/filters/regla-tiempo-nivel.filter';
+import { NumeroNivelDuplicadoFilter } from '../adapters/http/filters/numero-nivel-duplicado.filter';
 import { IdentityModule } from './identity.module';
 import {
   IGeneradorId,
@@ -55,6 +57,14 @@ import {
     {
       provide: APP_FILTER,
       useClass: FlechaLongitudInvalidaFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ReglaTiempoNivelFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: NumeroNivelDuplicadoFilter,
     },
   ],
 })

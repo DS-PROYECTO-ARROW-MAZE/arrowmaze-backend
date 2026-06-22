@@ -44,6 +44,8 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
       umbralEstrella2: dto.umbralEstrella2,
       umbralEstrella3: dto.umbralEstrella3,
       limiteTiempo: dto.limiteTiempo,
+      numero: dto.numero,
+      esBonus: dto.esBonus,
     });
 
     await this.repositorioNivel.guardar(nivel);
@@ -61,6 +63,8 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
       umbralEstrella2: nivel.umbralEstrella2,
       umbralEstrella3: nivel.umbralEstrella3,
       limiteTiempo: nivel.limiteTiempo,
+      numero: nivel.numero,
+      esBonus: nivel.esBonus,
     };
   }
 }

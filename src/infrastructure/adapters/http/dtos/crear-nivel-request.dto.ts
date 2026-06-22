@@ -1,6 +1,8 @@
 import {
   IsString,
   IsNumber,
+  IsInt,
+  IsBoolean,
   IsOptional,
   IsArray,
   ValidateNested,
@@ -67,4 +69,15 @@ export class CrearNivelRequestDto {
   @IsNumber()
   @Min(0)
   limiteTiempo?: number;
+
+  // Ordinal that gates the timed rule (PRD §3). Optional at the boundary; the domain
+  // enforces the timed-by-ordinal invariant and derives a default when omitted.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  numero?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  esBonus?: boolean;
 }
