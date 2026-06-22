@@ -76,5 +76,8 @@ model Progreso {
   jugador           User     @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
   nivel             Nivel    @relation(fields: [nivelId], references: [id], onDelete: Cascade)
 
+  // High-score persistence (ticket 13): at most one row per player/level — the best result.
+  // guardarLote upserts against this invariant inside its $transaction (ADR-0003).
+  @@unique([jugadorId, nivelId])
   @@map("progresos")
 }

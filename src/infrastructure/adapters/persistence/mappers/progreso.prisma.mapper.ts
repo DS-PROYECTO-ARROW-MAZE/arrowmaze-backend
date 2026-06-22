@@ -14,4 +14,16 @@ export class ProgresoPrismaMapper {
       nivel: { connect: { id: progreso.nivelId } },
     };
   }
+
+  // High-score update: replace the scored fields of the stored best (ticket 13). Identity
+  // and the (jugador, nivel) pair stay put — only the run's outcome moves.
+  static toUpdateInput(progreso: Progreso): Prisma.ProgresoUpdateInput {
+    return {
+      movimientos: progreso.movimientos,
+      segundosRestantes: progreso.segundosRestantes ?? null,
+      puntaje: progreso.puntaje,
+      estrellas: progreso.estrellas,
+      completadoEn: progreso.completadoEn,
+    };
+  }
 }
