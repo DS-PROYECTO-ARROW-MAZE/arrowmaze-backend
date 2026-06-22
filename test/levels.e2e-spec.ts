@@ -7,6 +7,9 @@ import {
   NIVEL_REPOSITORY,
   IRepositorioNivel,
 } from '../src/domain/repositories/nivel.repository.interface';
+import { I_LISTAR_NIVELES } from '../src/application/queries/listar-niveles.interface';
+import type { IListarNiveles } from '../src/application/queries/listar-niveles.interface';
+import { NivelResumenDto } from '../src/application/dtos/nivel-resumen.dto';
 import { Nivel } from '../src/domain/aggregates/nivel';
 import { DefinicionTablero } from '../src/domain/value-objects/definicion-tablero';
 import { FabricaCeldasEstandar } from '../src/domain/value-objects/celda';
@@ -16,8 +19,42 @@ import { Posicion } from '../src/domain/value-objects/posicion';
 describe('Levels (e2e)', () => {
   let app: INestApplication<App>;
   let mockRepo: jest.Mocked<IRepositorioNivel>;
+  let mockListarNiveles: jest.Mocked<IListarNiveles>;
 
   const idExistente = '00000000-0000-0000-0000-000000000001';
+
+  // Deliberately returned pre-ordered by numero: ordering is the query adapter's job
+  // (covered by listar-niveles-prisma.spec.ts); here we assert the route serves the
+  // summary projection unchanged and without board cells.
+  const catalogoResumen: NivelResumenDto[] = [
+    {
+      id: '00000000-0000-0000-0000-0000000000a1',
+      numero: 1,
+      nombre: 'Nivel 1',
+      dificultad: 'FACIL',
+      esBonus: false,
+      ancho: 3,
+      alto: 3,
+    },
+    {
+      id: '00000000-0000-0000-0000-0000000000a2',
+      numero: 5,
+      nombre: 'Nivel 5',
+      dificultad: 'FACIL',
+      esBonus: true,
+      ancho: 5,
+      alto: 5,
+    },
+    {
+      id: '00000000-0000-0000-0000-0000000000a3',
+      numero: 10,
+      nombre: 'Nivel 10',
+      dificultad: 'MEDIO',
+      esBonus: false,
+      ancho: 7,
+      alto: 7,
+    },
+  ];
 
   const nivelExistente = Nivel.crear({
     id: idExistente,
@@ -45,11 +82,17 @@ describe('Levels (e2e)', () => {
       }),
     };
 
+    mockListarNiveles = {
+      listar: jest.fn().mockResolvedValue(catalogoResumen),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(NIVEL_REPOSITORY)
       .useValue(mockRepo)
+      .overrideProvider(I_LISTAR_NIVELES)
+      .useValue(mockListarNiveles)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -339,5 +382,39 @@ describe('Levels (e2e)', () => {
       .expect(404);
 
     expect(res.body.message).toContain('no encontrado');
+  });
+
+  it('GET /levels returns the catalog ordered by numero ascending', async () => {
+    const res = await request(app.getHttpServer()).get('/levels').expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(3);
+    const numeros = res.body.map((n: NivelResumenDto) => n.numero);
+    expect(numeros).toEqual([...numeros].sort((a, b) => a - b));
+    expect(numeros).toEqual([1, 5, 10]);
+  });
+
+  it('GET /levels returns only summary fields with board cells absent', async () => {
+    const res = await request(app.getHttpServer()).get('/levels').expect(200);
+
+    for (const resumen of res.body) {
+      expect(resumen).toEqual({
+        id: expect.any(String),
+        numero: expect.any(Number),
+        nombre: expect.any(String),
+        dificultad: expect.any(String),
+        esBonus: expect.any(Boolean),
+        ancho: expect.any(Number),
+        alto: expect.any(Number),
+      });
+      // The list payload never carries the board grid (fetched per-id via ticket 04).
+      expect(resumen.celdas).toBeUndefined();
+    }
+  });
+
+  it('GET /levels flags bonus levels in the catalog', async () => {
+    const res = await request(app.getHttpServer()).get('/levels').expect(200);
+
+    expect(res.body.some((n: NivelResumenDto) => n.esBonus)).toBe(true);
   });
 });

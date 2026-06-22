@@ -9,6 +9,8 @@ import {
   NIVEL_REPOSITORY,
 } from '../../domain/repositories/nivel.repository.interface';
 import { PrismaNivelRepository } from '../adapters/persistence/repositories/prisma-nivel.repository';
+import { ListarNivelesPrisma } from '../adapters/persistence/queries/listar-niveles-prisma';
+import { I_LISTAR_NIVELES } from '../../application/queries/listar-niveles.interface';
 import { PrismaModule } from '../adapters/persistence/prisma/prisma.module';
 import { NivelNoSolvableFilter } from '../adapters/http/filters/nivel-no-solvable.filter';
 import { NivelNoEncontradoFilter } from '../adapters/http/filters/nivel-no-encontrado.filter';
@@ -45,6 +47,10 @@ import {
     {
       provide: NIVEL_REPOSITORY,
       useClass: PrismaNivelRepository,
+    },
+    {
+      provide: I_LISTAR_NIVELES,
+      useClass: ListarNivelesPrisma,
     },
     {
       provide: APP_FILTER,
