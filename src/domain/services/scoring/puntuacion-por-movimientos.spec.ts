@@ -7,8 +7,13 @@ import { Direccion } from '../../value-objects/direccion';
 function crearNivelUntimed(
   overrides: Partial<{ baseNivel: number; kmov: number }> = {},
 ): Nivel {
-  const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
-  const definicion = DefinicionTablero.crear(1, 1, celdas);
+  const celdas = [
+    [
+      FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+      FabricaCeldasEstandar.crearVacia(),
+    ],
+  ];
+  const definicion = DefinicionTablero.crear(2, 1, celdas);
   return Nivel.crear({
     id: 'nivel-test',
     nombre: 'Test',

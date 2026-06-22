@@ -1,5 +1,8 @@
 export interface CeldaDto {
-  tipo: 'flecha' | 'pared' | 'vacia' | 'coleccionable';
+  // 'ausente' marks a position outside the playable region of a shaped board. Shaped
+  // boards are expressed by including absent cells in the grid; on serve they round-trip
+  // back as 'ausente'.
+  tipo: 'flecha' | 'pared' | 'vacia' | 'coleccionable' | 'ausente';
   direccion?: string;
 }
 

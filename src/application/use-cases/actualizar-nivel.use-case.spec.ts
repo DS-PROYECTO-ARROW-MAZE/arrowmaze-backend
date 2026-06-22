@@ -18,10 +18,13 @@ describe('ActualizarNivelCasoDeUso', () => {
     id: idExistente,
     nombre: 'Nivel Original',
     dificultad: 'FACIL',
-    definicionTablero: DefinicionTablero.crear(1, 1, [
-      [FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)],
+    definicionTablero: DefinicionTablero.crear(2, 1, [
+      [
+        FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+        FabricaCeldasEstandar.crearVacia(),
+      ],
     ]),
-    ancho: 1,
+    ancho: 2,
     alto: 1,
     baseNivel: 1000,
     kmov: 10,
@@ -34,9 +37,9 @@ describe('ActualizarNivelCasoDeUso', () => {
   const dtoValido: ActualizarNivelDto = {
     nombre: 'Nivel Actualizado',
     dificultad: 'MEDIO',
-    ancho: 1,
+    ancho: 2,
     alto: 1,
-    celdas: [[{ tipo: 'flecha', direccion: 'ARRIBA' }]],
+    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
     baseNivel: 2000,
     kmov: 20,
     ktiempo: 10,

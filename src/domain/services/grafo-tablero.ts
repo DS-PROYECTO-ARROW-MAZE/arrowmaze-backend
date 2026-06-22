@@ -1,5 +1,5 @@
 import { Posicion } from '../value-objects/posicion';
-import { Direccion } from '../value-objects/direccion';
+import { Direccion, deltaDireccion } from '../value-objects/direccion';
 import { Celda, FabricaCeldasEstandar } from '../value-objects/celda';
 import { Tablero } from './tablero';
 
@@ -21,12 +21,17 @@ export class GrafoTablero implements Tablero {
   }
 
   esRayoLibre(origen: Posicion, direccion: Direccion): boolean {
-    const delta = this.deltaPara(direccion);
+    const delta = deltaDireccion(direccion);
     let x = origen.x + delta.x;
     let y = origen.y + delta.y;
 
     while (x >= 0 && x < this.ancho && y >= 0 && y < this.alto) {
       const celda = this.celdas[y][x];
+      // An absent position is not part of the shape: reaching it means the ray has left
+      // the playable region (an interior edge), so the arrow exits cleanly.
+      if (!celda || celda.tipo === 'ausente') {
+        return true;
+      }
       if (celda.tipo === 'pared' || celda.tipo === 'flecha') {
         return false;
       }
@@ -40,18 +45,5 @@ export class GrafoTablero implements Tablero {
     const nuevasCeldas = this.celdas.map((row) => [...row]);
     nuevasCeldas[pos.y][pos.x] = FabricaCeldasEstandar.crearVacia();
     return new GrafoTablero(this.ancho, this.alto, nuevasCeldas);
-  }
-
-  private deltaPara(direccion: Direccion): Posicion {
-    switch (direccion) {
-      case Direccion.ARRIBA:
-        return new Posicion(0, -1);
-      case Direccion.ABAJO:
-        return new Posicion(0, 1);
-      case Direccion.IZQUIERDA:
-        return new Posicion(-1, 0);
-      case Direccion.DERECHA:
-        return new Posicion(1, 0);
-    }
   }
 }

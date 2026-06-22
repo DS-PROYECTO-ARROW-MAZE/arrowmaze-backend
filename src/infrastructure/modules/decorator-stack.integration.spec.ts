@@ -32,9 +32,9 @@ const CASO_DE_USO_CREAR_NIVEL_DECORADO = 'CasoDeUsoCrearNivelDecorado';
 const dtoValido: CrearNivelDto = {
   nombre: 'Mi Nivel',
   dificultad: 'FACIL',
-  ancho: 1,
+  ancho: 2,
   alto: 1,
-  celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
+  celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
   baseNivel: 1000,
   kmov: 10,
   ktiempo: 5,
