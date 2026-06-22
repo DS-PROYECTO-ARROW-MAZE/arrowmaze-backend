@@ -19,6 +19,11 @@ export interface CrearNivelDto {
   umbralEstrella2: number;
   umbralEstrella3: number;
   limiteTiempo?: number;
+  // Ordinal that fixes play order and gates the timed rule (PRD §3). Optional at the API:
+  // when omitted the domain derives a value consistent with limiteTiempo.
+  numero?: number;
+  // Bonus levels are non-scoring and exempt from the timed rule.
+  esBonus?: boolean;
 }
 
 export interface CrearNivelResultadoDto {
@@ -34,4 +39,6 @@ export interface CrearNivelResultadoDto {
   umbralEstrella2: number;
   umbralEstrella3: number;
   limiteTiempo?: number;
+  numero: number;
+  esBonus: boolean;
 }

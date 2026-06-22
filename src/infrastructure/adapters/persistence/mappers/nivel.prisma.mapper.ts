@@ -27,6 +27,8 @@ export class NivelPrismaMapper {
       umbralEstrella2: nivel.umbralEstrella2,
       umbralEstrella3: nivel.umbralEstrella3,
       limiteTiempo: nivel.limiteTiempo ?? null,
+      numero: nivel.numero,
+      esBonus: nivel.esBonus,
       celdas: {
         create: this.celdasToPersistence(nivel),
       },
@@ -48,6 +50,8 @@ export class NivelPrismaMapper {
         umbralEstrella2: nivel.umbralEstrella2,
         umbralEstrella3: nivel.umbralEstrella3,
         limiteTiempo: nivel.limiteTiempo ?? null,
+        numero: nivel.numero,
+        esBonus: nivel.esBonus,
         celdas: {
           deleteMany: {},
           create: this.celdasToPersistence(nivel),
@@ -79,6 +83,8 @@ export class NivelPrismaMapper {
       umbralEstrella2: row.umbralEstrella2,
       umbralEstrella3: row.umbralEstrella3,
       limiteTiempo: row.limiteTiempo ?? undefined,
+      numero: row.numero,
+      esBonus: row.esBonus,
     });
   }
 

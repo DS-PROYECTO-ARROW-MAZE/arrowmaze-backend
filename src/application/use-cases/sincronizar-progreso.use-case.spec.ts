@@ -95,7 +95,7 @@ describe('SincronizarProgresoCasoDeUso', () => {
     // backend recomputation (faked here) may end up in the persisted batch.
     jest
       .spyOn(calculadora, 'ejecutar')
-      .mockReturnValue(new ResultadoPuntaje(777, 2));
+      .mockReturnValue(ResultadoPuntaje.puntuado(777, 2));
     const dtoConUnaCorrida: SincronizarProgresoDto = {
       jugadorId: 'jugador-1',
       progresos: [dtoValido.progresos[0]],
@@ -125,6 +125,26 @@ describe('SincronizarProgresoCasoDeUso', () => {
       movimientos: 3,
       segundosRestantes: 10,
     });
+  });
+
+  it('should_not_persist_a_progreso_when_the_run_is_non_scoring_bonus', async () => {
+    // Arrange — a bonus level produces a non-scoring result (PRD §3); it must not be
+    // persisted as progress. Here the only run is non-scoring, so the batch is empty.
+    jest
+      .spyOn(calculadora, 'ejecutar')
+      .mockReturnValue(ResultadoPuntaje.noPuntuable());
+    const dtoConUnaCorrida: SincronizarProgresoDto = {
+      jugadorId: 'jugador-1',
+      progresos: [dtoValido.progresos[0]],
+    };
+
+    // Act
+    const resultado = await useCase.execute(dtoConUnaCorrida);
+
+    // Assert
+    expect(resultado.guardados).toBe(0);
+    const lote = repositorioProgreso.guardarLote.mock.calls[0][0];
+    expect(lote).toHaveLength(0);
   });
 
   it('should_throw_NivelNoEncontradoException_and_never_call_guardarLote_when_a_run_references_an_unknown_level', async () => {

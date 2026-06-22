@@ -23,6 +23,12 @@ export class CalcularPuntuacionCasoDeUso {
   }
 
   ejecutar(params: CalcularPuntuacionParams): ResultadoPuntaje {
+    // Third path (PRD §3): bonus levels are non-scoring. Decided off the level's own flag,
+    // not a strategy subtype — no formula or star thresholds are applied.
+    if (params.nivel.esBonus) {
+      return ResultadoPuntaje.noPuntuable();
+    }
+
     const estrategia = this.seleccionarEstrategia(params.nivel);
     const puntaje = estrategia.calcular(
       params.nivel,
@@ -36,7 +42,7 @@ export class CalcularPuntuacionCasoDeUso {
       params.nivel.umbralEstrella2,
     );
 
-    return new ResultadoPuntaje(puntaje, estrellas);
+    return ResultadoPuntaje.puntuado(puntaje, estrellas);
   }
 
   private seleccionarEstrategia(nivel: Nivel): EstrategiaPuntuacion {

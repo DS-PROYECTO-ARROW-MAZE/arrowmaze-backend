@@ -15,6 +15,8 @@ function crearNivel(
     umbralEstrella2: number;
     umbralEstrella3: number;
     limiteTiempo?: number;
+    numero?: number;
+    esBonus?: boolean;
   }> = {},
 ): Nivel {
   const celdas = [
@@ -38,6 +40,8 @@ function crearNivel(
     umbralEstrella2: overrides.umbralEstrella2 ?? 500,
     umbralEstrella3: overrides.umbralEstrella3 ?? 250,
     limiteTiempo: overrides.limiteTiempo,
+    numero: overrides.numero,
+    esBonus: overrides.esBonus,
   });
 }
 
@@ -130,6 +134,36 @@ describe('CalcularPuntuacionCasoDeUso', () => {
       });
       const resultado = casoDeUso.ejecutar({ nivel, movimientos: 0 });
       expect(resultado.estrellas).toBe(3);
+    });
+  });
+
+  describe('bonus levels (non-scoring)', () => {
+    it('should_return_a_non_scoring_result_when_level_is_bonus', () => {
+      const nivel = crearNivel({ esBonus: true });
+      const resultado = casoDeUso.ejecutar({
+        nivel,
+        movimientos: 5,
+        segundosRestantes: 30,
+      });
+
+      expect(resultado.esPuntuable).toBe(false);
+    });
+
+    it('should_not_compute_puntaje_or_estrellas_when_level_is_bonus', () => {
+      // Params that would otherwise score high and earn 3 stars — proving the formula and
+      // star thresholds are skipped, not merely floored.
+      const nivel = crearNivel({
+        esBonus: true,
+        baseNivel: 1000,
+        kmov: 1,
+        umbralEstrella1: 500,
+        umbralEstrella2: 300,
+        umbralEstrella3: 100,
+      });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1 });
+
+      expect(resultado.puntaje).toBeNull();
+      expect(resultado.estrellas).toBeNull();
     });
   });
 

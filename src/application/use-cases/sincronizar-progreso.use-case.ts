@@ -42,6 +42,12 @@ export class SincronizarProgresoCasoDeUso implements ICasoDeUso<
         segundosRestantes: entrada.segundosRestantes,
       });
 
+      // Bonus levels are non-scoring (PRD §3): the result carries no Puntaje/Estrellas, so
+      // no Progreso is persisted for the run.
+      if (resultado.puntaje === null || resultado.estrellas === null) {
+        continue;
+      }
+
       progresos.push(
         Progreso.crear({
           id: this.generadorId.generar(),

@@ -27,6 +27,8 @@ model User {
 
 model Nivel {
   id              String      @id @default(uuid()) @db.Uuid
+  numero          Int         @unique
+  esBonus         Boolean     @default(false) @map("es_bonus")
   nombre          String
   dificultad      String
   ancho           Int
