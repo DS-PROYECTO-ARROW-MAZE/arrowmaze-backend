@@ -12,6 +12,14 @@ export interface CalcularPuntuacionParams {
 
 type TipoEstrategia = 'mixta' | 'porMovimientos';
 
+// Proportional star bands (PRD §3). proporción = puntaje / referencia, compared with integer
+// cross-multiplication (puntaje * den >= referencia * num) so the boundaries are exact and the
+// lower edge of each band is inclusive. Anything below the 2★ band collapses to the 1★ minimum.
+const BANDA_3_ESTRELLAS_NUM = 9;
+const BANDA_3_ESTRELLAS_DEN = 10; // proporción >= 9/10 → 3★ (near-max)
+const BANDA_2_ESTRELLAS_NUM = 2;
+const BANDA_2_ESTRELLAS_DEN = 3; //  proporción >= 2/3 → 2★
+
 export class CalcularPuntuacionCasoDeUso {
   private readonly estrategias: Map<TipoEstrategia, EstrategiaPuntuacion>;
 
@@ -36,11 +44,8 @@ export class CalcularPuntuacionCasoDeUso {
       params.segundosRestantes ?? 0,
     );
 
-    const estrellas = this.calcularEstrellas(
-      puntaje,
-      params.nivel.umbralEstrella1,
-      params.nivel.umbralEstrella2,
-    );
+    const referencia = this.calcularReferencia(estrategia, params.nivel);
+    const estrellas = this.calcularEstrellas(puntaje, referencia);
 
     return ResultadoPuntaje.puntuado(puntaje, estrellas);
   }
@@ -51,13 +56,24 @@ export class CalcularPuntuacionCasoDeUso {
       : this.estrategias.get('porMovimientos')!;
   }
 
-  private calcularEstrellas(
-    puntaje: number,
-    umbral1: number,
-    umbral2: number,
+  // The achievable maximum: a perfect run scores it with 0 movimientos and, when timed, the
+  // full limiteTiempo left on the clock. Reusing the selected strategy keeps referencia in
+  // lockstep with the formula, so swapping the strategy needs no change to the star step.
+  private calcularReferencia(
+    estrategia: EstrategiaPuntuacion,
+    nivel: Nivel,
   ): number {
-    if (puntaje >= umbral1) return 3;
-    if (puntaje >= umbral2) return 2;
+    return estrategia.calcular(nivel, 0, nivel.limiteTiempo ?? 0);
+  }
+
+  private calcularEstrellas(puntaje: number, referencia: number): number {
+    if (referencia <= 0) return 1;
+    if (puntaje * BANDA_3_ESTRELLAS_DEN >= referencia * BANDA_3_ESTRELLAS_NUM) {
+      return 3;
+    }
+    if (puntaje * BANDA_2_ESTRELLAS_DEN >= referencia * BANDA_2_ESTRELLAS_NUM) {
+      return 2;
+    }
     return 1;
   }
 }

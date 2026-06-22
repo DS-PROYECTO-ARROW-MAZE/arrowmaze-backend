@@ -75,65 +75,77 @@ describe('CalcularPuntuacionCasoDeUso', () => {
     });
   });
 
-  describe('stars', () => {
-    it('should_return_3_stars_when_puntaje_above_umbralEstrella1', () => {
-      const nivel = crearNivel({
-        baseNivel: 1000,
-        kmov: 1,
-        umbralEstrella1: 500,
-        umbralEstrella2: 300,
-        umbralEstrella3: 100,
-      });
-      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1 });
+  describe('proportional stars', () => {
+    // Stars track Puntaje as a fraction of the level's achievable maximum (referencia), not
+    // hand-tuned absolute thresholds (PRD §3). referencia is the perfect-run score: 0
+    // movimientos and, for timed levels, the full limiteTiempo. proporción = puntaje /
+    // referencia maps to stars by bands — proporción >= 9/10 → 3★ (near-max), >= 2/3 → 2★,
+    // otherwise the 1★ minimum. Each band's lower edge is inclusive. The umbralEstrella*
+    // fields no longer drive this step.
+
+    it('should_return_3_stars_when_proporcion_equals_near_max_band', () => {
+      // referencia = baseNivel = 900 (untimed); puntaje = 900 - 9*10 = 810 → proporción 0.9.
+      const nivel = crearNivel({ baseNivel: 900, kmov: 10 });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 9 });
+      expect(resultado.puntaje).toBe(810);
       expect(resultado.estrellas).toBe(3);
     });
 
-    it('should_return_2_stars_when_puntaje_between_umbralEstrella1_and_umbralEstrella2', () => {
-      const nivel = crearNivel({
-        baseNivel: 400,
-        kmov: 1,
-        umbralEstrella1: 500,
-        umbralEstrella2: 300,
-        umbralEstrella3: 100,
-      });
-      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1 });
+    it('should_return_2_stars_when_proporcion_just_below_near_max_band', () => {
+      // puntaje = 900 - 10*10 = 800 → proporción 0.888… (< 9/10).
+      const nivel = crearNivel({ baseNivel: 900, kmov: 10 });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 10 });
+      expect(resultado.puntaje).toBe(800);
       expect(resultado.estrellas).toBe(2);
     });
 
-    it('should_return_1_star_when_puntaje_between_umbralEstrella2_and_umbralEstrella3', () => {
-      const nivel = crearNivel({
-        baseNivel: 200,
-        kmov: 1,
-        umbralEstrella1: 500,
-        umbralEstrella2: 300,
-        umbralEstrella3: 100,
-      });
-      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1 });
+    it('should_return_2_stars_when_proporcion_equals_two_thirds_band', () => {
+      // puntaje = 900 - 30*10 = 600 → proporción 2/3 exactly.
+      const nivel = crearNivel({ baseNivel: 900, kmov: 10 });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 30 });
+      expect(resultado.puntaje).toBe(600);
+      expect(resultado.estrellas).toBe(2);
+    });
+
+    it('should_return_1_star_when_proporcion_just_below_two_thirds_band', () => {
+      // puntaje = 900 - 31*10 = 590 → proporción 0.655… (< 2/3).
+      const nivel = crearNivel({ baseNivel: 900, kmov: 10 });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 31 });
+      expect(resultado.puntaje).toBe(590);
       expect(resultado.estrellas).toBe(1);
     });
 
-    it('should_return_1_star_when_puntaje_below_umbralEstrella3', () => {
-      const nivel = crearNivel({
-        baseNivel: 50,
-        kmov: 1,
-        umbralEstrella1: 500,
-        umbralEstrella2: 300,
-        umbralEstrella3: 100,
-      });
-      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1 });
-      expect(resultado.estrellas).toBe(1);
-    });
-
-    it('should_return_3_stars_when_puntaje_equals_umbralEstrella1', () => {
-      const nivel = crearNivel({
-        baseNivel: 500,
-        kmov: 1,
-        umbralEstrella1: 500,
-        umbralEstrella2: 300,
-        umbralEstrella3: 100,
-      });
+    it('should_return_3_stars_when_puntaje_equals_referencia', () => {
+      // A perfect run (0 movimientos) scores the whole reference → proporción 1.0.
+      const nivel = crearNivel({ baseNivel: 500, kmov: 10 });
       const resultado = casoDeUso.ejecutar({ nivel, movimientos: 0 });
       expect(resultado.estrellas).toBe(3);
+    });
+
+    it('should_return_the_minimum_1_star_when_puntaje_is_zero', () => {
+      const nivel = crearNivel({ baseNivel: 100, kmov: 10 });
+      const resultado = casoDeUso.ejecutar({ nivel, movimientos: 1000 });
+      expect(resultado.puntaje).toBe(0);
+      expect(resultado.estrellas).toBe(1);
+    });
+
+    it('should_include_the_time_bonus_in_referencia_for_timed_levels', () => {
+      // Timed referencia = baseNivel + limiteTiempo*ktiempo = 1000 + 60*5 = 1300.
+      // puntaje = 1000 - 5*10 + 30*5 = 1100 → proporción 1100/1300 ≈ 0.846 → 2★, not 3★,
+      // because the achievable maximum counts the unspent seconds.
+      const nivel = crearNivel({
+        baseNivel: 1000,
+        kmov: 10,
+        ktiempo: 5,
+        limiteTiempo: 60,
+      });
+      const resultado = casoDeUso.ejecutar({
+        nivel,
+        movimientos: 5,
+        segundosRestantes: 30,
+      });
+      expect(resultado.puntaje).toBe(1100);
+      expect(resultado.estrellas).toBe(2);
     });
   });
 
