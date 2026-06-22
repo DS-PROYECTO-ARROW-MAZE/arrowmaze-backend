@@ -6,6 +6,8 @@ import {
   Inject,
   UseFilters,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { RegisterUserUseCase } from '../../../../application/use-cases/register-user.use-case';
 import { LoginUseCase } from '../../../../application/use-cases/login.use-case';
@@ -45,6 +47,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginRequestDto) {
     return this.loginUseCase.execute(dto);
   }

@@ -16,12 +16,16 @@ describe('Progress (e2e)', () => {
   const password = 'secreta123';
   const nombreNivel = `Nivel Progreso E2E ${randomUUID()}`;
 
+  // A 2-cell solvable board: the single-cell arrow fixture this test used to carry now
+  // violates the arrow-length>=2 rule (level-rules ticket) and 422s at creation, so the
+  // sync flow it gates could never be exercised. Two cells keep the run scorable while
+  // satisfying the rule; the score below depends only on baseNivel/kmov/movimientos.
   const solvableBoard = {
     nombre: nombreNivel,
     dificultad: 'FACIL',
-    ancho: 1,
+    ancho: 2,
     alto: 1,
-    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }]],
+    celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
     baseNivel: 1000,
     kmov: 10,
     ktiempo: 5,
@@ -104,6 +108,36 @@ describe('Progress (e2e)', () => {
     expect(rows[0].estrellas).toBe(3);
   });
 
+  it('should_reject_with_400_and_persist_nothing_when_the_batch_uses_the_legacy_client_field_names', async () => {
+    // Regression (ticket 12): the Flutter client used to post elapsed-time `tiempoSegundos`
+    // plus a client-claimed `estrellas`. Neither is on the canonical contract — the server
+    // owns time as `segundosRestantes` and recomputes stars — so `forbidNonWhitelisted` must
+    // reject them LOUDLY with a 400. A silent drop is exactly how real gameplay went missing
+    // from Supabase, so this asserts the run is rejected AND nothing is written.
+    const movimientosCentinela = 999;
+
+    await request(app.getHttpServer())
+      .post('/progress/sync')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        progresos: [
+          {
+            nivelId,
+            estrellas: 3,
+            movimientos: movimientosCentinela,
+            tiempoSegundos: 35,
+            completadoEn: new Date().toISOString(),
+          },
+        ],
+      })
+      .expect(400);
+
+    const rows = await prisma.progreso.findMany({
+      where: { nivelId, movimientos: movimientosCentinela },
+    });
+    expect(rows).toHaveLength(0);
+  });
+
   it('should_persist_nothing_for_the_batch_when_one_run_references_an_unknown_level', async () => {
     // Arrange
     const idDesconocido = randomUUID();
@@ -150,5 +184,49 @@ describe('Progress (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ progresos: [] })
       .expect(400);
+  });
+
+  it('should_surface_synced_gameplay_rows_in_the_leaderboard_ordered_by_puntaje', async () => {
+    // Closes the loop the ticket is really about: rows written by /progress/sync must be
+    // readable through the real (un-mocked) ranking projection. This level is created fresh
+    // per run, so every leaderboard entry here is gameplay-originated — never Postman seed.
+    await request(app.getHttpServer())
+      .post('/progress/sync')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        progresos: [
+          {
+            nivelId,
+            movimientos: 0,
+            segundosRestantes: 0,
+            completadoEn: new Date().toISOString(),
+          },
+          {
+            nivelId,
+            movimientos: 5,
+            segundosRestantes: 0,
+            completadoEn: new Date().toISOString(),
+          },
+        ],
+      })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/leaderboard?idNivel=${nivelId}&limite=10`)
+      .expect(200);
+
+    const entradas = res.body.entradas as Array<{
+      puntaje: number;
+      email: string;
+    }>;
+
+    // Every returned entry is this player's synced gameplay — proof the projection joins the
+    // synced rows rather than returning an empty/seed-only board.
+    expect(entradas.length).toBeGreaterThanOrEqual(2);
+    expect(entradas.every((entrada) => entrada.email === email)).toBe(true);
+    // baseNivel(1000) - movimientos(0) * kmov(10) = 1000 is the best run and must lead.
+    expect(entradas[0].puntaje).toBe(1000);
+    const puntajes = entradas.map((entrada) => entrada.puntaje);
+    expect(puntajes).toEqual([...puntajes].sort((a, b) => b - a));
   });
 });
