@@ -1,16 +1,18 @@
-import { Injectable, Inject } from '@nestjs/common';
 import { User } from '../../domain/entities/user.entity';
-import { I_USER_REPOSITORY } from '../../domain/repositories/user.repository.interface';
 import type { IUserRepository } from '../../domain/repositories/user.repository.interface';
+import { EmailYaRegistradoException } from '../../domain/exceptions/email-ya-registrado.exception';
+import type { IHashContrasena } from '../ports/hash-contrasena.port';
+import type { IPublicadorEventos } from '../../domain/events/publicador-eventos.interface';
 import { RegisterUserDto } from '../dtos/register-user.dto';
-import { randomUUID } from 'crypto';
+import type { IGeneradorId } from '../ports/generador-id.port';
 
-@Injectable()
 export class RegisterUserUseCase {
   // Aplicando DIP: Dependemos de la abstracción (Interfaz), no de la implementación concreta
   constructor(
-    @Inject(I_USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly hashContrasena: IHashContrasena,
+    private readonly publicadorEventos: IPublicadorEventos,
+    private readonly generadorId: IGeneradorId,
   ) {}
 
   async execute(dto: RegisterUserDto): Promise<User> {
@@ -18,15 +20,26 @@ export class RegisterUserUseCase {
     const existingUser = await this.userRepository.findByEmail(dto.email);
 
     if (existingUser) {
-      throw new Error('El usuario ya está registrado en ArrowMaze');
+      throw new EmailYaRegistradoException(dto.email);
     }
 
-    // 2. Crear la entidad de dominio pura
-    // (Nota: En el Sprint 3 añadiremos bcrypt para hashear la contraseña, por ahora la pasamos directo)
-    const newUser = new User(randomUUID(), dto.email, dto.password, new Date());
+    // 2. Crear el agregado, con la contraseña ya hasheada — registrar() deja constancia
+    // del evento de dominio "jugador registrado" (la reconstrucción vía el constructor
+    // plano, usada por los mappers, nunca lo emite).
+    const passwordHash = await this.hashContrasena.hash(dto.password);
+    const newUser = User.registrar(
+      this.generadorId.generar(),
+      dto.email,
+      passwordHash,
+      new Date(),
+    );
 
     // 3. Persistir la entidad usando el puerto
     await this.userRepository.save(newUser);
+
+    // 4. Publicar solo tras el commit — un registro fallido no emite evento.
+    await this.publicadorEventos.publicar(newUser.domainEvents);
+    newUser.clearEvents();
 
     return newUser;
   }

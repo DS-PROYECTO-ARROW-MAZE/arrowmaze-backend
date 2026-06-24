@@ -85,3 +85,37 @@
   `PuntuacionPorTiempo`, `NivelFacil/Medio/Dificil`, plural `CargadorNiveles`, cell
   decorators/Composite) is forbidden and linted in **07**.
 - Coverage gate: domain + application ≥ **90%** lines (PRD §1.4 / §7).
+
+## Phase 5 — Enhancement batch (tickets 12–17)
+
+> Added after the MVP graph above. Ticket **12 is Priority 1** (hotfix) and should be grabbed
+> first. Cross-repo twins live in `arrowmaze-frontend` (tickets 15–21). Diagram deltas are
+> planned in `DIAGRAM-RECONCILIATION.md §10`.
+
+| # | Ticket | Story | Blocked by | Phase | Priority |
+|---|--------|-------|------------|-------|----------|
+| 12 | Restore gameplay→Supabase progress sync & leaderboard visibility | E2/E3 (regression) | 08, 11 | Hotfix | **1** |
+| 13 | High-score persistence (strictly-higher upsert) | E2′ | 08, 12 | 5 | — |
+| 14 | Dynamic board geometry + arrow-length-≥2 invariant | C3″ | 01 | 5 | — |
+| 15 | Level rules — integer ids, timed ≥10, bonus exemption | C3‴ | 01, 05 | 5 | — |
+| 16 | Seed & serve 15+ ordered levels (catalog) | C2′ | 04, 14, 15 | 5 | — |
+| 17 | Proportional star rating from final score | D3′ | 05, 15 | 5 | — |
+
+- **Grab first:** 12 (P1). After 12 → 13. 14 and 15 open off 01/05 in parallel. 16 needs 14+15.
+  17 needs 05+15.
+- **Cross-repo agreement:** 14 (shaped golden boards), 16 (`PerfilDificultad`), 17 (golden
+  scores) must stay in lockstep with their frontend twins.
+
+## Phase 6 — Enhancement batch 2 (ticket 18)
+
+> Added 2026-06-24 from the second requirements batch (PRD §12). Most of batch 2 is frontend
+> (tickets 22–30); the backend's share is the **read path** for progress restore + high-score.
+
+| # | Ticket | Story | Blocked by | Phase | Priority |
+|---|--------|-------|------------|-------|----------|
+| 18 | `GET /progress` restore endpoint + high-score read guarantee | E4 / E2′ | 08, 11, 13 | 6 | **1** (twin of FE 24) |
+
+- **Grab first:** 18 (P1) — pairs with `arrowmaze-frontend` ticket 24; share one contract.
+- **Scope:** read-only, JWT-guarded endpoint returning **best-per-level** (one row per level,
+  guaranteed by ticket 13's `@@unique`). Validates the high-score rule from the read side; does
+  **not** re-implement the strictly-greater upsert (that stays in ticket 13).

@@ -7,15 +7,77 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime / app connections go through Supabase's transaction pooler (port 6543, pgbouncer=true).
+  url       = env("DATABASE_URL")
+  // CLI migrations & `db push` use a direct/session connection (port 5432) so prepared
+  // statements work — the pooler in transaction mode breaks them ("s1 already exists").
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id           String   @id @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String     @id @db.Uuid
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  progresos    Progreso[]
 
   @@map("users")
+}
+
+model Nivel {
+  id              String      @id @default(uuid()) @db.Uuid
+  numero          Int         @unique
+  esBonus         Boolean     @default(false) @map("es_bonus")
+  nombre          String
+  dificultad      String
+  ancho           Int
+  alto            Int
+  baseNivel       Int         @map("base_nivel")
+  kmov            Int
+  ktiempo         Int
+  umbralEstrella1 Int         @map("umbral_estrella_1")
+  umbralEstrella2 Int         @map("umbral_estrella_2")
+  umbralEstrella3 Int         @map("umbral_estrella_3")
+  limiteTiempo    Int?        @map("limite_tiempo")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  celdas          CeldaNivel[]
+  progresos       Progreso[]
+
+  @@map("niveles")
+}
+
+model CeldaNivel {
+  id        String @id @default(uuid()) @db.Uuid
+  nivelId   String @map("nivel_id") @db.Uuid
+  x         Int
+  y         Int
+  tipo      String
+  direccion String?
+  nivel     Nivel  @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+
+  @@map("celdas_nivel")
+}
+
+// Progreso: a re-scored, completed run for one player/level (PRD §6.3). Batches of these
+// persist atomically via RepositorioProgreso.guardarLote inside a repository-scoped
+// $transaction (ADR-0003) — never via a Unit of Work.
+model Progreso {
+  id                String   @id @default(uuid()) @db.Uuid
+  jugadorId         String   @map("jugador_id") @db.Uuid
+  nivelId           String   @map("nivel_id") @db.Uuid
+  movimientos       Int
+  segundosRestantes Int?     @map("segundos_restantes")
+  puntaje           Int
+  estrellas         Int
+  completadoEn      DateTime @map("completado_en")
+  createdAt         DateTime @default(now()) @map("created_at")
+  jugador           User     @relation(fields: [jugadorId], references: [id], onDelete: Cascade)
+  nivel             Nivel    @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+
+  // High-score persistence (ticket 13): at most one row per player/level — the best result.
+  // guardarLote upserts against this invariant inside its $transaction (ADR-0003).
+  @@unique([jugadorId, nivelId])
+  @@map("progresos")
 }

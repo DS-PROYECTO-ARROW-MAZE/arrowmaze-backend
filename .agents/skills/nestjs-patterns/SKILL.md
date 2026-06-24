@@ -70,7 +70,7 @@ src/
 ```
 
 - `domain/` must never import from `application/`, `infrastructure/`, NestJS, or Prisma. Domain entities are hand-written aggregates, **not** the types Prisma generates.
-- `application/` imports only from `domain/`. Use cases depend on repository and port interfaces, not implementations.
+- `application/` imports only from `domain/`. Use cases depend on repository and port interfaces, not implementations. **No NestJS decorators (`@Injectable`, `@Inject`) or framework imports in this layer — use cases are plain TypeScript classes.**
 - `infrastructure/` is the only layer that imports NestJS decorators and the Prisma client.
 - The Prisma schema and migrations live in a root-level `prisma/` folder (Prisma's convention), separate from `src/`. The generated client is the default `@prisma/client`.
 - Controllers live in `infrastructure/adapters/http/` — they are adapters, not domain logic.
@@ -138,11 +138,8 @@ export class UsersController {
 }
 
 // application/use-cases/create-user.use-case.ts
-@Injectable()
 export class CreateUserUseCase {
-  constructor(
-    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-  ) {}
+  constructor(private readonly userRepo: IUserRepository) {}
 
   async execute(dto: CreateUserDto): Promise<UserResponseDto> {
     const user = User.create(dto);          // domain entity factory
@@ -185,6 +182,7 @@ export class PrismaUserRepository implements IUserRepository {
 
 - Controllers are thin HTTP adapters: parse input, call one use case, return the result.
 - Use cases own business flow; they speak domain language and depend on interfaces, not concrete repos.
+- Use cases are **plain classes** — no `@Injectable`/`@Inject` decorators. The framework wires them via the module's `providers` array.
 - Inject repository implementations via a Symbol token so use cases never import infrastructure.
 - The repository receives `PrismaService` and maps Prisma rows to domain aggregates with a persistence mapper — Prisma types stay inside `persistence/`.
 
