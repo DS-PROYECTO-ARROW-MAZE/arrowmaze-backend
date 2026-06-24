@@ -83,6 +83,15 @@ empty grid spaces show only a **subtle dot**. These rules are normative for the 
    there are **zero** empty cells until the player resolves paths.
 5. **Gameplay reveal.** Resolving a path removes its **entire** length at once, leaving empty
    space (dots) behind, which in turn opens exit rays for the remaining paths.
+6. **Path-following exit animation.** A resolving path animates out **snake-like** — the head
+   travels along the path's own multi-cell trajectory to the exit edge and each tail segment
+   follows the **exact same curve** (including bends), driven by Flutter animation controllers.
+   It is **never** a rigid whole-shape slide. The animation is purely presentational and
+   decoupled from the rule (the domain has already removed the path). See §12 (req 1) / FE-22.
+7. **Irregular board shapes render faithfully.** Boards may be non-rectangular (heart, triangle,
+   star…). The UI draws **only** playable cells; *absent* positions paint nothing and are not
+   hit-testable, distinct from a transparent `CeldaVacia` (which still shows a dot). See §12
+   (req 6) / FE-16 / FE-26.
 
 > **Resolve rule (assumption, faithful to the source game):** a path resolves when its
 > **head** has a clear straight ray to the board edge in the head's direction; the whole path
@@ -153,19 +162,35 @@ being able to "cheat" the move count.*
 - **Given** the last arrow exits, **Then** the session transitions to `EstadoVictoria`, a
   `Victoria` event fires, and the final `Puntaje`/`Estrellas` are computed.
 
-**B2 — Defeat (timed only).** *As a player on a timed level, I lose if time runs out.*
+**B2 — Defeat (out of time *or* out of moves).** *As a player, I lose if time runs out on a
+timed level **or** if I exhaust my move budget before clearing the board.*
 - **Given** a level with `limiteTiempo`, **When** the timer reaches 0 before victory,
-  **Then** the session transitions to `EstadoDerrota`. **And** an untimed level can never
-  enter `EstadoDerrota`.
+  **Then** the session transitions to `EstadoDerrota`.
+- **Given** a level's move budget (`presupuestoMovimientos = nFlechas + margen`), **When** the
+  budget reaches 0 while the board is non-empty, **Then** the session transitions to
+  `EstadoDerrota` (Game Over) — **on timed *and* untimed levels**. Clearing the board on the
+  last allowed move is a **victory** (victory wins ties). See §12 (req 12) / FE-30.
+- **Note (superseded invariant):** the move-budget rule introduces a **timer-independent**
+  defeat trigger, so the former "an untimed level can never enter `EstadoDerrota`" invariant is
+  **deliberately retired** as of 2026-06-24 (§12). Deadlock-based defeat (§1.3 / §10) remains
+  out of scope — defeat comes only from time or move-budget exhaustion.
+
+**B5 — Move countdown HUD.** *As a player, my moves count **down** from a per-level budget.*
+- **Given** a started level, **Then** the HUD shows `presupuestoMovimientos` decrementing on
+  every tap (valid **or** invalid, consistent with A2) rather than a from-zero up-counter. FE-30.
 
 **B3 — Pause/Resume.** *As a player, I can pause and resume.*
 - **Given** `EstadoJugando`, **When** I pause, **Then** state is `EstadoPausado` and taps are
   rejected until I resume (`EstadoJugando`). The timer does not advance while paused.
 
-**B4 — Undo.** *As a player, I can undo my last move (valid or invalid).*
+**B4 — Undo (capped at 3 per level).** *As a player, I can undo my last move (valid or invalid),
+up to a strict maximum of **3 uses per level**.*
 - **Given** a recorded move in `CommandHistory`, **When** I undo,
   **Then** the board delta is reversed (or the no-delta +1 is rolled back), `movimientos`
-  decrements, and counters stay consistent.
+  decrements, the **move budget is restored by one** (§B2/FE-30), and counters stay consistent.
+- **Given** I have already undone **3** times this level, **When** I attempt a 4th undo,
+  **Then** it is a no-op and the control is disabled; the undo counter **resets** on level
+  restart / new level. See §12 (req 8) / FE-30.
 
 ### Epic C — Levels & Generation
 
@@ -469,7 +494,12 @@ Domain + application layers target **≥ 90% line coverage**.
 
 - ✅ Last arrow exits → `EstadoVictoria`, `Victoria` event, final `Puntaje`/`Estrellas` computed.
 - ✅ Timed level: timer to 0 before clear → `EstadoDerrota`.
-- ✅ **Untimed level can never reach `EstadoDerrota`** (property/negative test).
+- ✅ Move-budget defeat: budget (`nFlechas + margen`) reaching 0 before clear → `EstadoDerrota`
+  on **both** timed and untimed levels; clearing on the last allowed move → victory (victory
+  wins ties). *(Supersedes the former "untimed level can never reach `EstadoDerrota`" test as of
+  §12 / 2026-06-24.)*
+- ✅ Undo cap: at most **3** undos per level; a 4th is a no-op; the counter resets per level; an
+  undo restores one move-budget unit (counters never drift).
 - ✅ `EstadoPausado`: taps rejected; timer frozen; resume returns to `EstadoJugando`.
 - ✅ Undo reverses delta (or no-delta +1), decrements `movimientos`, keeps counters consistent.
 
@@ -576,6 +606,88 @@ structure; difficulty subclasses.
 | E3 | DM-B5 | §7.7 |
 | F1 | DM-F7, DM-F9, DM-B4 | §7.6 |
 | (all) | DM-B6, DM-F8 | §7.8 |
+
+---
+
+## 12. Enhancement Batch 2 — New Requirements (2026-06-24)
+
+> A second batch of product requirements, integrated into the sections above and decomposed into
+> tickets (`arrowmaze-frontend/.issues/22…30`, `arrowmaze-backend/.issues/18`). Each item keeps
+> the project's non-negotiables: **strict TDD** (§7), **Clean Architecture / MVVM** (§5,
+> CLAUDE.md), the **ubiquitous language** (§4), and **solvability-before-render** (§1.4).
+
+### 12.1 Gameplay & Session rules
+
+1. **Path-following (snake-like) exit animation** *(FE-22, §1.4 rule 6)* — a resolving
+   `Trayectoria` animates head-first along its own multi-cell path to the edge; tail segments
+   follow the identical curve via Flutter animation controllers (arc-length tween). **Never** a
+   rigid whole-shape slide. Purely presentational; decoupled from the (already atomic) rule.
+12. **Move countdown & Game Over** *(FE-30, §3 B2/B5)* — the counter **counts down** from
+    `presupuestoMovimientos = nFlechas + margen`; each tap (valid or invalid) decrements it;
+    hitting 0 before clearing → **Game Over** (`EstadoDerrota`) on timed **and** untimed levels.
+    **Deliberate invariant change:** the prior "untimed levels can never lose" rule (§3 B2, §7.3)
+    is retired. Game Over reuses the GoF **State** `EstadoDerrota` — no ad-hoc state.
+8.  **Undo cap = 3 per level** *(FE-30, §3 B4)* — undo is no longer unlimited; max 3 uses per
+    level, control disabled afterwards, counter resets per level, each undo restores one
+    move-budget unit.
+
+### 12.2 Levels, Generation & Difficulty
+
+2. **Aggressive difficulty scaling** *(FE-23)* — a steep, monotonic `PerfilDificultad` (data, not
+   subclasses) grows grid size and arrow count sharply; late levels are large, dense, and complex.
+3. **Endless in-app level generation** *(FE-23)* — past the authored catalog the app procedurally
+   generates fresh, always-solvable levels indefinitely (offline-first), so difficulty scales
+   **without app-store updates**. The `validarSolvencia` template gate and arrow-length ≥ 2
+   invariant (FE-16 / BE-14) still cannot be bypassed.
+6. **Irregular board shape rendering** *(FE-26 / FE-16, §1.4 rule 7)* — the Flutter UI renders the
+   non-rectangular (masked) boards the backend **already serves** (BE-14, sparse `CeldaNivel`):
+   only playable cells are drawn and hit-tested; *absent* ≠ `CeldaVacia`.
+
+### 12.3 Frontend UI / UX & Feedback
+
+5.  **Softer SFX** *(FE-25)* — replace/retune sound effects to be softer and more pleasant; same
+    Observer wiring (`TipoEvento → AudioServiceImp`); bounded polyphony so rapid repeats don't spam.
+10. **Invalid-move feedback** *(FE-28, §3 A2)* — on tapping a blocked arrow the red alert fires
+    **once per interaction** (debounced, no visual spam under rapid taps) **and** the device emits
+    **haptic** vibration via an injected port (graceful where unavailable). Rule unchanged.
+11. **15-second timer warning** *(FE-29)* — on timed levels, a distinct **visual + audio** warning
+    fires **once** as the countdown crosses exactly 15 s (Observer-driven `AvisoTiempo`); never on
+    untimed/bonus levels; resets per run.
+9.  **Settings menu (post-login) + i18n** *(FE-27)* — a Settings button after login with **Sound
+    (On/Off)** (mutes `AudioServiceImp`, no game-logic change) and **Language (English/Spanish)**
+    via a real i18n implementation (no hard-coded UI strings). Both persist (`shared_preferences`,
+    `ConfiguracionManager` DI-lifetime — ADR-0002) and apply on startup.
+
+### 12.4 Backend & Cross-repo
+
+4. **Progress state sync** *(FE-24 + BE-18)* —
+   - *Back-navigation:* Level Select **re-reads progression on every appearance** (not only via
+     "Next Level" after a win), so locks/stars are never stale.
+   - *Login restore:* a new **`GET /progress`** endpoint (BE-18, JWT-guarded, read-only) returns
+     the player's **best result per level**; the client calls it on login (FE-24), hydrates local
+     progression (merge keeps the best), and restores previously unlocked levels instead of
+     starting from scratch. The read path stays separate from the offline upload queue.
+7. **High-score persistence (validated)** *(BE-18 + BE-13)* — the DB keeps only the player's
+   **strictly-higher** score per `(jugador, nivel)` (BE-13's upsert + `@@unique`); BE-18 validates
+   this **from the read side** (`GET /progress`/leaderboard surface only the single best row), and
+   re-confirms server-side score recomputation (BE-05) agreement.
+
+### 12.5 Traceability (req → ticket)
+
+| Req | Summary | Ticket(s) |
+|---|---|---|
+| 1  | Path-following snake-like exit animation | FE-22 |
+| 2  | Aggressive difficulty scaling | FE-23 |
+| 3  | Endless in-app level generation | FE-23 |
+| 4  | Progress sync (back-nav refresh + login restore) | FE-24, BE-18 |
+| 5  | Softer SFX | FE-25 |
+| 6  | Irregular board shape rendering | FE-26 (FE-16, BE-14) |
+| 7  | High-score rule (validated) | BE-18, BE-13 |
+| 8  | Undo cap (3/level) | FE-30 |
+| 9  | Settings menu (sound + EN/ES i18n) | FE-27 |
+| 10 | Invalid-move single alert + haptics | FE-28 |
+| 11 | 15-second timer warning | FE-29 |
+| 12 | Move countdown + Game Over | FE-30 |
 
 ---
 

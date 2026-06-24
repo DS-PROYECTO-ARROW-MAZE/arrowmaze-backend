@@ -105,3 +105,17 @@
   17 needs 05+15.
 - **Cross-repo agreement:** 14 (shaped golden boards), 16 (`PerfilDificultad`), 17 (golden
   scores) must stay in lockstep with their frontend twins.
+
+## Phase 6 — Enhancement batch 2 (ticket 18)
+
+> Added 2026-06-24 from the second requirements batch (PRD §12). Most of batch 2 is frontend
+> (tickets 22–30); the backend's share is the **read path** for progress restore + high-score.
+
+| # | Ticket | Story | Blocked by | Phase | Priority |
+|---|--------|-------|------------|-------|----------|
+| 18 | `GET /progress` restore endpoint + high-score read guarantee | E4 / E2′ | 08, 11, 13 | 6 | **1** (twin of FE 24) |
+
+- **Grab first:** 18 (P1) — pairs with `arrowmaze-frontend` ticket 24; share one contract.
+- **Scope:** read-only, JWT-guarded endpoint returning **best-per-level** (one row per level,
+  guaranteed by ticket 13's `@@unique`). Validates the high-score rule from the read side; does
+  **not** re-implement the strictly-greater upsert (that stays in ticket 13).
