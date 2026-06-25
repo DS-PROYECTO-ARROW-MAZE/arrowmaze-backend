@@ -87,7 +87,7 @@ async function compilarModuloDePrueba(proveedorSesion: IProveedorSesion) {
       { provide: I_PROVEEDOR_SESION, useValue: proveedorSesion },
       {
         provide: I_GENERADOR_ID,
-        useValue: { generar: () => 'nivel-generado-test' } as IGeneradorId,
+        useValue: { generar: () => 'nivel-generado-test' },
       },
       {
         provide: CrearNivelCasoDeUso,

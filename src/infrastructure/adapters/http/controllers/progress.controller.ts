@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   Inject,
   UseGuards,
@@ -8,6 +9,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SincronizarProgresoCasoDeUso } from '../../../../application/use-cases/sincronizar-progreso.use-case';
+import { ObtenerProgresoCasoDeUso } from '../../../../application/use-cases/obtener-progreso.use-case';
 import { I_PROVEEDOR_SESION } from '../../../../application/ports/proveedor-sesion.port';
 import type { IProveedorSesion } from '../../../../application/ports/proveedor-sesion.port';
 import { SincronizarProgresoRequestDto } from '../dtos/sincronizar-progreso-request.dto';
@@ -17,6 +19,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 export class ProgressController {
   constructor(
     private readonly sincronizarProgresoCasoDeUso: SincronizarProgresoCasoDeUso,
+    private readonly obtenerProgresoCasoDeUso: ObtenerProgresoCasoDeUso,
     @Inject(I_PROVEEDOR_SESION)
     private readonly proveedorSesion: IProveedorSesion,
   ) {}
@@ -33,5 +36,12 @@ export class ProgressController {
       jugadorId: principal.id,
       progresos: dto.progresos,
     });
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async list() {
+    const principal = this.proveedorSesion.obtenerPrincipal()!;
+    return this.obtenerProgresoCasoDeUso.execute(principal.id);
   }
 }

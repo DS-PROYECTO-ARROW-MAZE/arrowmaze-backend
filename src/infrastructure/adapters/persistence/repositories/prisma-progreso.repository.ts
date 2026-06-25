@@ -50,9 +50,19 @@ export class PrismaProgresoRepository implements IRepositorioProgreso {
     });
   }
 
+  async obtenerPorJugador(jugadorId: string): Promise<Progreso[]> {
+    const rows = await this.prisma.progreso.findMany({
+      where: { jugadorId },
+      orderBy: { nivel: { numero: 'asc' } },
+    });
+    return rows.map((row) => ProgresoPrismaMapper.toDomain(row));
+  }
+
   // Collapse a batch to a single best run per (jugador, nivel) before touching the DB, so two
   // runs of the same level never produce partial/duplicate writes — only the max survives.
-  private colapsarAMejorPorNivel(progresos: Progreso[]): Progreso[] {
+  private readonly colapsarAMejorPorNivel = (
+    progresos: Progreso[],
+  ): Progreso[] => {
     const mejores = new Map<string, Progreso>();
 
     for (const progreso of progresos) {
@@ -64,5 +74,5 @@ export class PrismaProgresoRepository implements IRepositorioProgreso {
     }
 
     return [...mejores.values()];
-  }
+  };
 }
