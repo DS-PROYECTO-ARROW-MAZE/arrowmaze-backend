@@ -6,4 +6,5 @@ export const PROGRESO_REPOSITORY = Symbol('PROGRESO_REPOSITORY');
 // $transaction encapsulated inside the Prisma adapter; this port never names Prisma.
 export interface IRepositorioProgreso {
   guardarLote(progresos: Progreso[]): Promise<void>;
+  obtenerPorJugador(jugadorId: string): Promise<Progreso[]>;
 }

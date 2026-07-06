@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    command: npm run start:dev
+    networks:
+      - arrowmaze-net
+
+networks:
+  # Fixed (non-project-scoped) name so the frontend's compose project can join
+  # the same network and reach this service by name (http://backend:3000) when
+  # both are deployed together. Whichever project starts first creates it;
+  # the other just attaches to it.
+  arrowmaze-net:
+    name: arrowmaze-net

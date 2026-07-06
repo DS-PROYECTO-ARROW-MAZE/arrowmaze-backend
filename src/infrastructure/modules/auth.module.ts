@@ -53,7 +53,8 @@ const DEFAULT_JWT_EXPIRES_IN = '1h';
         hasher: IHashContrasena,
         publicadorEventos: IPublicadorEventos,
         generadorId: IGeneradorId,
-      ) => new RegisterUserUseCase(repo, hasher, publicadorEventos, generadorId),
+      ) =>
+        new RegisterUserUseCase(repo, hasher, publicadorEventos, generadorId),
       inject: [
         I_USER_REPOSITORY,
         I_HASH_CONTRASENA,

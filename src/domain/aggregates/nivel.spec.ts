@@ -97,9 +97,9 @@ describe('Nivel', () => {
     });
 
     it('should_throw_ReglaTiempoNivelException_when_numero_is_4_and_has_limiteTiempo', () => {
-      expect(() =>
-        crearConReglas({ numero: 4, limiteTiempo: 90 }),
-      ).toThrow(ReglaTiempoNivelException);
+      expect(() => crearConReglas({ numero: 4, limiteTiempo: 90 })).toThrow(
+        ReglaTiempoNivelException,
+      );
     });
 
     it('should_create_a_timed_level_when_numero_is_exactly_10_with_limiteTiempo', () => {
@@ -123,9 +123,9 @@ describe('Nivel', () => {
     });
 
     it('should_throw_when_numero_is_9_with_limiteTiempo', () => {
-      expect(() =>
-        crearConReglas({ numero: 9, limiteTiempo: 90 }),
-      ).toThrow(ReglaTiempoNivelException);
+      expect(() => crearConReglas({ numero: 9, limiteTiempo: 90 })).toThrow(
+        ReglaTiempoNivelException,
+      );
     });
   });
 

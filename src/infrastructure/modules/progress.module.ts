@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProgressController } from '../adapters/http/controllers/progress.controller';
 import { SincronizarProgresoCasoDeUso } from '../../application/use-cases/sincronizar-progreso.use-case';
+import { ObtenerProgresoCasoDeUso } from '../../application/use-cases/obtener-progreso.use-case';
 import { CalcularPuntuacionCasoDeUso } from '../../application/use-cases/calcular-puntuacion.use-case';
 import {
   IRepositorioProgreso,
@@ -38,6 +39,12 @@ import {
           generadorId,
         ),
       inject: [PROGRESO_REPOSITORY, NIVEL_REPOSITORY, I_GENERADOR_ID],
+    },
+    {
+      provide: ObtenerProgresoCasoDeUso,
+      useFactory: (repositorioProgreso: IRepositorioProgreso) =>
+        new ObtenerProgresoCasoDeUso(repositorioProgreso),
+      inject: [PROGRESO_REPOSITORY],
     },
     {
       provide: PROGRESO_REPOSITORY,

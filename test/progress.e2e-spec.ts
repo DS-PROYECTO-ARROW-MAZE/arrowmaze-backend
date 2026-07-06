@@ -16,12 +16,19 @@ describe('Progress (e2e)', () => {
   const password = 'secreta123';
   const nombreNivel = `Nivel Progreso E2E ${randomUUID()}`;
 
+  // Use a high ordinal so it does not collide with the seed catalogue (1-15) or stale rows
+  // from a previous aborted run. Must pair with limiteTiempo so the timed-by-ordinal rule
+  // does not reject it.
+  const testBaseNumero = 9000;
+  const testLimiteTiempo = 999;
+
   // A 2-cell solvable board: the single-cell arrow fixture this test used to carry now
   // violates the arrow-length>=2 rule (level-rules ticket) and 422s at creation, so the
   // sync flow it gates could never be exercised. Two cells keep the run scorable while
   // satisfying the rule; the score below depends only on baseNivel/kmov/movimientos.
   const solvableBoard = {
     nombre: nombreNivel,
+    numero: testBaseNumero,
     dificultad: 'FACIL',
     ancho: 2,
     alto: 1,
@@ -32,6 +39,7 @@ describe('Progress (e2e)', () => {
     umbralEstrella1: 800,
     umbralEstrella2: 600,
     umbralEstrella3: 400,
+    limiteTiempo: testLimiteTiempo,
   };
 
   jest.setTimeout(30000);
@@ -105,7 +113,8 @@ describe('Progress (e2e)', () => {
     expect(rows).toHaveLength(1);
     // baseNivel(1000) - movimientos(1) * kmov(10) = 990 (untimed: time term dropped).
     expect(rows[0].puntaje).toBe(990);
-    expect(rows[0].estrellas).toBe(3);
+    // Timed (limiteTiempo=999): referencia = 1000 + 999*5 = 5995, so 990/5995 ≈ 0.165 < 2/3 → 1★.
+    expect(rows[0].estrellas).toBe(1);
   });
 
   it('should_reject_with_400_and_persist_nothing_when_the_batch_uses_the_legacy_client_field_names', async () => {
@@ -184,6 +193,140 @@ describe('Progress (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ progresos: [] })
       .expect(400);
+  });
+
+  it('should_return_401_when_getting_progress_without_a_token', async () => {
+    await request(app.getHttpServer()).get('/progress').expect(401);
+  });
+
+  it('should_return_empty_array_when_the_player_has_no_progress', async () => {
+    const noopEmail = `noop-progress-${randomUUID()}@arrowmaze.test`;
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: noopEmail, password })
+      .expect(201);
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: noopEmail, password })
+      .expect(200);
+    const noopToken = loginRes.body.token as string;
+
+    const res = await request(app.getHttpServer())
+      .get('/progress')
+      .set('Authorization', `Bearer ${noopToken}`)
+      .expect(200);
+
+    expect(res.body).toEqual([]);
+  });
+
+  it('should_return_best_per_level_when_the_player_has_progress', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/progress')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(1);
+
+    for (const entrada of res.body) {
+      expect(entrada).toHaveProperty('nivelId');
+      expect(entrada).toHaveProperty('puntaje');
+      expect(entrada).toHaveProperty('estrellas');
+      expect(entrada).toHaveProperty('movimientos');
+      expect(entrada).toHaveProperty('completadoEn');
+      expect(typeof entrada.puntaje).toBe('number');
+      expect(typeof entrada.estrellas).toBe('number');
+      expect(typeof entrada.movimientos).toBe('number');
+    }
+  });
+
+  it('should_never_surface_worse_or_equal_runs_when_a_higher_score_exists', async () => {
+    // Arrange — create a fresh level to guarantee no pre-existing progress.
+    const hsNombre = `hs-progress-${randomUUID()}`;
+    const hsLevelRes = await request(app.getHttpServer())
+      .post('/levels')
+      .send({
+        nombre: hsNombre,
+        numero: testBaseNumero + 1,
+        dificultad: 'FACIL',
+        ancho: 2,
+        alto: 1,
+        celdas: [[{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'vacia' }]],
+        baseNivel: 1000,
+        kmov: 10,
+        ktiempo: 5,
+        umbralEstrella1: 800,
+        umbralEstrella2: 600,
+        umbralEstrella3: 400,
+        limiteTiempo: testLimiteTiempo,
+      })
+      .expect(201);
+    const hsNivelId = hsLevelRes.body.id as string;
+
+    // Act — sync a best run (puntaje = 1000 - 10*10 = 900), then a worse run (puntaje = 800),
+    // then a better run (puntaje = 950).
+    await request(app.getHttpServer())
+      .post('/progress/sync')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        progresos: [
+          {
+            nivelId: hsNivelId,
+            movimientos: 10,
+            segundosRestantes: 0,
+            completadoEn: new Date(Date.now() - 60000).toISOString(),
+          },
+        ],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/progress/sync')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        progresos: [
+          {
+            nivelId: hsNivelId,
+            movimientos: 20,
+            segundosRestantes: 0,
+            completadoEn: new Date().toISOString(),
+          },
+        ],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/progress/sync')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        progresos: [
+          {
+            nivelId: hsNivelId,
+            movimientos: 5,
+            segundosRestantes: 0,
+            completadoEn: new Date().toISOString(),
+          },
+        ],
+      })
+      .expect(201);
+
+    // Assert — only the best row (puntaje 950) surfaces.
+    const res = await request(app.getHttpServer())
+      .get('/progress')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const nivelEntry = (
+      res.body as Array<{ nivelId: string; puntaje: number }>
+    ).find((e: { nivelId: string }) => e.nivelId === hsNivelId);
+    expect(nivelEntry).toBeDefined();
+    expect(nivelEntry!.puntaje).toBe(950);
+
+    // Cleanup
+    await prisma.progreso.deleteMany({ where: { nivelId: hsNivelId } });
+    await prisma.celdaNivel.deleteMany({ where: { nivelId: hsNivelId } });
+    await prisma.nivel.deleteMany({ where: { id: hsNivelId } });
   });
 
   it('should_surface_synced_gameplay_rows_in_the_leaderboard_ordered_by_puntaje', async () => {
