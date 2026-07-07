@@ -56,7 +56,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     useCase = new ObtenerNivelCasoDeUso(repo);
   });
 
-  it('should throw NivelNoEncontradoException when id is unknown', async () => {
+  it('should_throw_NivelNoEncontradoException_when_id_is_unknown', async () => {
     repo.obtenerPorId.mockResolvedValue(null);
 
     await expect(useCase.execute('unknown-id')).rejects.toThrow(
@@ -64,7 +64,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     );
   });
 
-  it('should return level dto when level is found and solvable', async () => {
+  it('should_return_level_dto_when_level_is_found_and_solvable', async () => {
     repo.obtenerPorId.mockResolvedValue(nivelSolvable);
 
     const resultado = await useCase.execute(nivelSolvable.id);
@@ -83,7 +83,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     expect(resultado.limiteTiempo).toBeUndefined();
   });
 
-  it('should include celdas in the response dto', async () => {
+  it('should_include_celdas_in_the_response_dto_when_level_is_found', async () => {
     repo.obtenerPorId.mockResolvedValue(nivelSolvable);
 
     const resultado = await useCase.execute(nivelSolvable.id);
@@ -93,7 +93,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     ]);
   });
 
-  it('should throw NivelNoSolvableException when a stored-but-now-unsolvable board is found (corruption)', async () => {
+  it('should_throw_NivelNoSolvableException_when_a_stored_but_now_unsolvable_board_is_found', async () => {
     repo.obtenerPorId.mockResolvedValue(nivelCorrupto);
 
     await expect(useCase.execute(nivelCorrupto.id)).rejects.toThrow(
@@ -101,7 +101,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     );
   });
 
-  it('should re-validate solvability before returning the level', async () => {
+  it('should_re_validate_solvability_when_returning_the_level', async () => {
     const obtenerSpy = jest.spyOn(repo, 'obtenerPorId');
     repo.obtenerPorId.mockResolvedValue(nivelSolvable);
 
@@ -110,7 +110,7 @@ describe('ObtenerNivelCasoDeUso', () => {
     expect(obtenerSpy).toHaveBeenCalledWith(nivelSolvable.id);
   });
 
-  it('should return level with limiteTiempo when present', async () => {
+  it('should_return_level_with_limiteTiempo_when_present', async () => {
     const nivelConTiempo = Nivel.crear({
       id: '00000000-0000-0000-0000-000000000003',
       nombre: 'Nivel Con Tiempo',

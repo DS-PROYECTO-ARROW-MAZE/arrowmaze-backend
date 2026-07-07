@@ -40,7 +40,7 @@ describe('NivelPresenter', () => {
     limiteTiempo: 30,
   });
 
-  it('should map Nivel to DefinicionNivelDto with stable field names', () => {
+  it('should_map_Nivel_to_DefinicionNivelDto_with_stable_field_names_when_toDto_is_called', () => {
     const dto = NivelPresenter.toDto(nivel);
 
     expect(dto.id).toBe('00000000-0000-0000-0000-000000000001');
@@ -57,13 +57,13 @@ describe('NivelPresenter', () => {
     expect(dto.limiteTiempo).toBeUndefined();
   });
 
-  it('should include celdas in the mapped DTO', () => {
+  it('should_include_celdas_in_the_mapped_DTO_when_toDto_is_called', () => {
     const dto = NivelPresenter.toDto(nivel);
 
     expect(dto.celdas).toEqual([[{ tipo: 'flecha', direccion: 'DERECHA' }]]);
   });
 
-  it('should map limiteTiempo when present', () => {
+  it('should_map_limiteTiempo_when_present', () => {
     const dto = NivelPresenter.toDto(nivelConTiempo);
 
     expect(dto.limiteTiempo).toBe(30);
@@ -71,7 +71,7 @@ describe('NivelPresenter', () => {
     expect(dto.kmov).toBe(5);
   });
 
-  it('should not leak domain types in the output', () => {
+  it('should_not_leak_domain_types_in_the_output_when_toDto_is_called', () => {
     const dto = NivelPresenter.toDto(nivel);
 
     expect(dto).not.toBeInstanceOf(Nivel);
@@ -82,7 +82,7 @@ describe('NivelPresenter', () => {
     }
   });
 
-  it('should map all cell types correctly', () => {
+  it('should_map_all_cell_types_correctly_when_toDto_is_called', () => {
     const nivelVariado = Nivel.crear({
       id: '00000000-0000-0000-0000-000000000003',
       nombre: 'Variado',

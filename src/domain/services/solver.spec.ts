@@ -29,31 +29,31 @@ function tableroDesdeGolden(golden: GoldenBoard): GrafoTablero {
 
 describe('Solver', () => {
   describe('esSolvable', () => {
-    it('returns true for a golden solvable board', () => {
+    it('should_return_true_when_the_board_is_a_golden_solvable_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.solvable);
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('returns false for a golden unsolvable board', () => {
+    it('should_return_false_when_the_board_is_a_golden_unsolvable_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.unsolvable);
       expect(esSolvable(tablero)).toBe(false);
     });
 
-    it('returns true for an empty board', () => {
+    it('should_return_true_when_the_board_is_empty', () => {
       const tablero = new GrafoTablero(1, 1, [
         [FabricaCeldasEstandar.crearVacia()],
       ]);
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('removes a single arrow pointing to the edge', () => {
+    it('should_return_true_when_a_single_arrow_points_to_the_edge', () => {
       const tablero = new GrafoTablero(1, 1, [
         [FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)],
       ]);
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('detects unsolvable when arrows block each other', () => {
+    it('should_return_false_when_arrows_block_each_other', () => {
       const tablero = new GrafoTablero(2, 1, [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -63,7 +63,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(false);
     });
 
-    it('is order-independent: returns same verdict regardless of removal order', () => {
+    it('should_return_the_same_verdict_when_called_repeatedly_regardless_of_removal_order', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -77,7 +77,7 @@ describe('Solver', () => {
       }
     });
 
-    it('treats CeldaVacia as transparent', () => {
+    it('should_return_true_when_a_CeldaVacia_is_treated_as_transparent', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -88,7 +88,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('ray passes through empty but not through walls', () => {
+    it('should_return_false_when_the_ray_is_blocked_by_a_wall', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -99,7 +99,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(false);
     });
 
-    it('collectible does not block the ray', () => {
+    it('should_return_true_when_a_collectible_does_not_block_the_ray', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -110,7 +110,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('solves a multi-step chain', () => {
+    it('should_return_true_when_solving_a_multi_step_chain', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -122,7 +122,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('ray exits when it reaches an absent cell, ignoring walls beyond the mask', () => {
+    it('should_return_true_when_the_ray_exits_at_an_absent_cell_ignoring_walls_beyond_the_mask', () => {
       // flecha -> vacia -> ausente -> pared. The ray leaves the playable region at the
       // absent cell before it can reach the wall, so the arrow exits and the board solves.
       const celdas = [
@@ -137,7 +137,7 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('treats absent differently from empty: empty stays transparent up to a wall', () => {
+    it('should_return_false_when_empty_cells_stay_transparent_up_to_a_wall', () => {
       // Same layout but the third cell is empty (transparent) instead of absent, so the
       // ray keeps going and is blocked by the wall: unsolvable.
       const celdas = [
@@ -152,17 +152,17 @@ describe('Solver', () => {
       expect(esSolvable(tablero)).toBe(false);
     });
 
-    it('returns true for a golden solvable triangle board', () => {
+    it('should_return_true_when_the_board_is_a_golden_solvable_triangle_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.triangleSolvable);
       expect(esSolvable(tablero)).toBe(true);
     });
 
-    it('returns false for a golden unsolvable triangle board', () => {
+    it('should_return_false_when_the_board_is_a_golden_unsolvable_triangle_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.triangleUnsolvable);
       expect(esSolvable(tablero)).toBe(false);
     });
 
-    it('returns true for a golden solvable heart board', () => {
+    it('should_return_true_when_the_board_is_a_golden_solvable_heart_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.heartSolvable);
       expect(esSolvable(tablero)).toBe(true);
     });

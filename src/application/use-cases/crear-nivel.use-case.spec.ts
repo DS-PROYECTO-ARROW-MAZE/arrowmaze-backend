@@ -31,7 +31,7 @@ describe('CrearNivelCasoDeUso', () => {
     useCase = new CrearNivelCasoDeUso(repo, generadorId);
   });
 
-  it('creates a level and persists it for a solvable board', async () => {
+  it('should_create_and_persist_a_level_when_the_board_is_solvable', async () => {
     const resultado = await useCase.execute(dtoValido);
 
     expect(resultado.id).toBeDefined();
@@ -43,7 +43,7 @@ describe('CrearNivelCasoDeUso', () => {
     expect(nivelGuardado.nombre).toBe('Mi Nivel');
   });
 
-  it('rejects an unsolvable board and does NOT call guardar', async () => {
+  it('should_reject_the_board_and_not_call_guardar_when_the_board_is_unsolvable', async () => {
     const dtoInvalido: CrearNivelDto = {
       ...dtoValido,
       ancho: 2,
@@ -59,7 +59,7 @@ describe('CrearNivelCasoDeUso', () => {
     expect(repo.guardar).not.toHaveBeenCalled();
   });
 
-  it('creates a timed level with limiteTiempo', async () => {
+  it('should_create_a_timed_level_when_limiteTiempo_is_provided', async () => {
     const dtoConTiempo: CrearNivelDto = {
       ...dtoValido,
       limiteTiempo: 60,
@@ -69,12 +69,12 @@ describe('CrearNivelCasoDeUso', () => {
     expect(resultado.limiteTiempo).toBe(60);
   });
 
-  it('creates a level without limiteTiempo', async () => {
+  it('should_create_an_untimed_level_when_limiteTiempo_is_omitted', async () => {
     const resultado = await useCase.execute(dtoValido);
     expect(resultado.limiteTiempo).toBeUndefined();
   });
 
-  it('maps all cell types (flecha, pared, vacia, coleccionable)', async () => {
+  it('should_map_all_cell_types_when_the_board_mixes_flecha_pared_vacia_and_coleccionable', async () => {
     const dtoVariado: CrearNivelDto = {
       ...dtoValido,
       ancho: 4,

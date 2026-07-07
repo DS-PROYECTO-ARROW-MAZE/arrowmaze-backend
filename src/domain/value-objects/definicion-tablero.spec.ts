@@ -9,7 +9,7 @@ import { FlechaLongitudInvalidaException } from '../exceptions/flecha-longitud-i
 
 describe('DefinicionTablero', () => {
   describe('crear', () => {
-    it('returns a frozen DefinicionTablero', () => {
+    it('should_return_a_frozen_DefinicionTablero_when_crear_is_called', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -23,7 +23,7 @@ describe('DefinicionTablero', () => {
       expect(dt.celdaEn(new Posicion(0, 0)).tipo).toBe('flecha');
     });
 
-    it('preserves celda types through the round-trip', () => {
+    it('should_preserve_celda_types_when_round_tripping_through_crear', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -39,14 +39,14 @@ describe('DefinicionTablero', () => {
       expect(dt.celdaEn(new Posicion(3, 0)).tipo).toBe('coleccionable');
     });
 
-    it('throws FlechaLongitudInvalidaException when an arrow resolves to a single cell', () => {
+    it('should_throw_FlechaLongitudInvalidaException_when_an_arrow_resolves_to_a_single_cell', () => {
       const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
       expect(() => DefinicionTablero.crear(1, 1, celdas)).toThrow(
         FlechaLongitudInvalidaException,
       );
     });
 
-    it('throws when an arrow points straight off the bounding box edge', () => {
+    it('should_throw_when_an_arrow_points_straight_off_the_bounding_box_edge', () => {
       // Arrow on the top row pointing up: its very first step leaves the board.
       const celdas = [
         [FabricaCeldasEstandar.crearFlecha(Direccion.ARRIBA)],
@@ -57,7 +57,7 @@ describe('DefinicionTablero', () => {
       );
     });
 
-    it('throws when the cell in front of an arrow is absent (shape edge)', () => {
+    it('should_throw_when_the_cell_in_front_of_an_arrow_is_absent_shape_edge', () => {
       // Arrow points right but the next position is outside the playable shape.
       const celdas = [
         [
@@ -70,7 +70,7 @@ describe('DefinicionTablero', () => {
       );
     });
 
-    it('accepts an arrow whose path is exactly the minimum length (floor is inclusive of 2)', () => {
+    it('should_accept_an_arrow_when_its_path_is_exactly_the_minimum_length', () => {
       expect(LONGITUD_MINIMA_FLECHA).toBe(2);
       const celdas = [
         [
@@ -81,7 +81,7 @@ describe('DefinicionTablero', () => {
       expect(() => DefinicionTablero.crear(2, 1, celdas)).not.toThrow();
     });
 
-    it('accepts arrows longer than the minimum', () => {
+    it('should_accept_an_arrow_when_its_path_is_longer_than_the_minimum', () => {
       const celdas = [
         [
           FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
@@ -94,7 +94,7 @@ describe('DefinicionTablero', () => {
   });
 
   describe('restaurar', () => {
-    it('returns a frozen DefinicionTablero without the arrow-length check', () => {
+    it('should_return_a_frozen_DefinicionTablero_without_the_arrow_length_check_when_restaurar_is_called', () => {
       // restaurar trusts already-persisted data, so it does not re-enforce the invariant.
       const celdas = [[FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA)]];
       const dt = DefinicionTablero.restaurar(1, 1, celdas);

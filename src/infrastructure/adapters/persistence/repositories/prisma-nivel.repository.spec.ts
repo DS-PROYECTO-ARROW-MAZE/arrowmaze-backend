@@ -48,7 +48,7 @@ describe('PrismaNivelRepository', () => {
     repository = new PrismaNivelRepository(mockPrismaService as any);
   });
 
-  it('guardar persists the nivel using Prisma nested write', async () => {
+  it('should_persist_the_nivel_using_a_Prisma_nested_write_when_guardar_is_called', async () => {
     mockCreate.mockResolvedValue(undefined);
 
     await repository.guardar(nivel);
@@ -61,14 +61,14 @@ describe('PrismaNivelRepository', () => {
     expect(callArg.data.celdas.create).toHaveLength(2);
   });
 
-  it('obtenerPorId returns null when nivel does not exist', async () => {
+  it('should_return_null_when_obtenerPorId_finds_no_nivel', async () => {
     mockFindUnique.mockResolvedValue(null);
 
     const result = await repository.obtenerPorId('non-existent');
     expect(result).toBeNull();
   });
 
-  it('obtenerPorId returns a Nivel domain object', async () => {
+  it('should_return_a_Nivel_domain_object_when_obtenerPorId_finds_a_row', async () => {
     const prismaRow = {
       id: nivel.id,
       nombre: 'Test',
@@ -107,7 +107,7 @@ describe('PrismaNivelRepository', () => {
     );
   });
 
-  it('round-trips a sparse (shaped) board without inventing filler cells', async () => {
+  it('should_round_trip_a_sparse_shaped_board_without_inventing_filler_cells', async () => {
     // A shaped board: only (0,0) and (1,1) are playable; the other two bounding-box
     // positions are absent and must persist as the absence of a row.
     const celdasShaped = [
