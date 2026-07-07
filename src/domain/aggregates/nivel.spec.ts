@@ -13,7 +13,7 @@ describe('Nivel', () => {
   ];
   const definicion = DefinicionTablero.crear(2, 1, celdasSolvable);
 
-  it('creates a Nivel with valid data', () => {
+  it('should_create_a_Nivel_when_data_is_valid', () => {
     const nivel = Nivel.crear({
       id: 'nivel-test',
       nombre: 'Test Level',
@@ -44,7 +44,7 @@ describe('Nivel', () => {
     expect(typeof nivel.id).toBe('string');
   });
 
-  it('creates a Nivel with limiteTiempo', () => {
+  it('should_create_a_Nivel_when_limiteTiempo_is_provided', () => {
     const nivel = Nivel.crear({
       id: 'nivel-timed',
       nombre: 'Timed Level',
