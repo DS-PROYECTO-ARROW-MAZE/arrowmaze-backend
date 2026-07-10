@@ -57,6 +57,9 @@ the application layer cannot import `@prisma/client`. Architecture tests in
 | **`application/`** | Use cases (`CrearNivelCasoDeUso`, `RegisterUserUseCase`, `LoginUseCase`, `SincronizarProgresoCasoDeUso`, `CalcularPuntuacionCasoDeUso`, etc.), application DTOs, infrastructure ports (`IHashContrasena`, `IGeneradorId`, `ProveedorSesion`, `IMedidorMetricas`, `IRegistro`), and the **Decorator stack** (security, logging, metrics at the use-case level). | Imports only `domain/`. Decorators implement `ICasoDeUso<E,S>` and depend on ports, never concrete implementations. |
 | **`infrastructure/`** | NestJS controllers, Prisma adapters (repositories, mappers, queries), exception → HTTP filters, JWT guards, interceptors (leaderboard cache), security adapters (`BcryptHashAdapter`, `JwtAdapter`), and NestJS modules. | Only layer where NestJS, Prisma, and frameworks are allowed. |
 
+![Architecture diagram](docs/arquitecturaBackend-arrowmaze.png)
+
+
 ### Implemented GoF Patterns
 
 | Pattern | Where it lives |
@@ -68,23 +71,10 @@ the application layer cannot import `@prisma/client`. Architecture tests in
 | **Adapter** | All `*Prisma*`, `BcryptHashAdapter`, `JwtAdapter`, `CryptoGeneradorIdAdapter` |
 | **Dependency Inversion** | Use cases depend on ports (`IGeneradorId`, `IHashContrasena`, `ProveedorSesion`), not implementations |
 
-### Architecture Decision Records (ADRs)
-
-Key decisions documented in `docs/adr/`:
-
-- **ADR-0001** — The backend is the authoritative solvability gate: every board is re-validated on create, update, and read.
-- **ADR-0002** — Only `AudioServiceImp` is a real Singleton; session access goes through an injected port (`ProveedorSesion`).
-- **ADR-0003** — No explicit Unit of Work; atomicity via Prisma nested writes + `$transaction` inside the adapter.
-- **ADR-0004** — Two-tier AOP: Decorators at the application layer + Interceptors at the transport layer. The domain has neither.
-- **ADR-0005** — Canonical progress-sync contract: `POST /progress/sync` receives `segundosRestantes` (remaining, not elapsed); score and stars are recomputed server-side.
-
-### Ubiquitous Language
-
-The entire domain uses **Spanish** consistent with the glossary in `CONTEXT.md`. Forbidden terms (enforced by architecture tests): `CeldaSalida`, `PuntuacionPorTiempo`, `NivelFacil/Medio/Dificil`, cell decorators, Composite.
 
 ## AI-Assisted Development Workflow
 
-This project uses **[OpenCode](https://opencode.ai)** as an AI coding agent to maintain architectural consistency across the codebase. The agent is guided by two mechanisms:
+This project uses **[OpenCode](https://opencode.ai)** and **[claude code](https://claude.com/code)* as an AI coding agent to maintain architectural consistency across the codebase. The agent is guided by two mechanisms:
 
 ### Skills (`.agents/skills/`)
 
