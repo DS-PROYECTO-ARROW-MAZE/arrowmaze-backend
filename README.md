@@ -1,13 +1,15 @@
 # ArrowMaze Backend
 
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white) ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white) ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white) ![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white) ![License](https://img.shields.io/badge/License-UNLICENSED-red)
+
 Backend for **ArrowMaze** — a logic puzzle game played on grid boards with continuous-path arrows. The player taps the head of an arrow; if the ray to the board edge is clear, the entire path is removed. The goal is to clear the board.
 
 University project in **Desarrollo de Software** course. **NRC 25783**.
 Teacher: Carlos Alonzo
 
-## Development Team — TEAM 01
+## Development TEAM 01
 
-| Member | ID Number |
+| Member | CI Number |
 |---|---|
 | Blanco, Antonio | 20.613.680 |
 | Márquez, Jac José | 29.710.631 |
@@ -62,19 +64,165 @@ the application layer cannot import `@prisma/client`. Architecture tests in
 
 ### Implemented GoF Patterns
 
-| Pattern | Where it lives |
-|---|---|
-| **Strategy** | `EstrategiaPuntuacion` → `PuntuacionPorMovimientos` (untimed levels), `PuntuacionMixta` (timed levels) |
-| **Decorator** | Use-case stack: `DecoradorSeguridadCasoDeUso`, `DecoradorRegistroCasoDeUso`, `DecoradorMetricasCasoDeUso` |
-| **Observer** | `PublicadorEventosJuego` + `ObservadorJuego` (backend domain events) |
-| **Repository** | Ports `INivelRepository`, `IUserRepository`, `IProgresoRepository` → `Prisma*Repository` adapters |
-| **Adapter** | All `*Prisma*`, `BcryptHashAdapter`, `JwtAdapter`, `CryptoGeneradorIdAdapter` |
-| **Dependency Inversion** | Use cases depend on ports (`IGeneradorId`, `IHashContrasena`, `ProveedorSesion`), not implementations |
+| Pattern | Description | Implementation |
+|---|---|---|
+| **Strategy** | Encapsulates interchangeable scoring algorithms | [`EstrategiaPuntuacion`](src/domain/services/scoring/estrategia-puntuacion.interface.ts) + [`PuntuacionPorMovimientos`](src/domain/services/scoring/puntuacion-por-movimientos.ts) + [`PuntuacionMixta`](src/domain/services/scoring/puntuacion-mixta.ts) |
+| **Decorator** | Wraps use cases with cross-cutting concerns (metrics, logging, security) | [`DecoradorCasoDeUso`](src/application/decorators/decorador-caso-de-uso.ts) + [`DecoradorMetricas`](src/application/decorators/decorador-metricas.ts) + [`DecoradorRegistro`](src/application/decorators/decorador-registro.ts) + [`DecoradorSeguridad`](src/application/decorators/decorador-seguridad.ts) |
+| **Observer** | Publishes domain events decoupled from the publisher | [`IPublicadorEventos`](src/domain/events/publicador-eventos.interface.ts) + [`PublicadorEventosAdapter`](src/infrastructure/adapters/messaging/publicador-eventos.adapter.ts) |
+| **Repository** | Abstracts persistence behind domain-focused interfaces | [`IRepositorioNivel`](src/domain/repositories/nivel.repository.interface.ts) → [`PrismaNivelRepository`](src/infrastructure/adapters/persistence/repositories/prisma-nivel.repository.ts) |
+| **Adapter** | Wraps external libraries behind application ports | [`BcryptHashAdapter`](src/infrastructure/adapters/security/bcrypt-hash.adapter.ts) · [`JwtAdapter`](src/infrastructure/adapters/security/jwt.adapter.ts) · [`CryptoGeneradorIdAdapter`](src/infrastructure/adapters/identity/crypto-generador-id.adapter.ts) |
+| **Dependency Inversion** | Use cases depend on port interfaces, never concrete implementations | [`RegisterUserUseCase`](src/application/use-cases/register-user.use-case.ts) injects `IUserRepository`, `IHashContrasena`, `IPublicadorEventos`, `IGeneradorId` |
 
+
+## SOLID Principles
+
+### SRP — Single Responsibility Principle
+
+Each class has one clearly defined responsibility:
+
+```typescript
+// src/domain/value-objects/definicion-tablero.ts
+// Responsibility: encapsulate board dimensions and cell layout only
+export class DefinicionTablero {
+  private readonly celdas: ReadonlyArray<ReadonlyArray<Celda>>;
+
+  private constructor(
+    public readonly ancho: number,
+    public readonly alto: number,
+    celdas: Celda[][],
+  ) { /* freezes and stores */ }
+
+  static crear(ancho: number, alto: number, celdas: Celda[][]): DefinicionTablero { /* ... */ }
+  static restaurar(ancho: number, alto: number, celdas: Celda[][]): DefinicionTablero { /* ... */ }
+  celdaEn(pos: Posicion): Celda { /* ... */ }
+}
+```
+
+Other examples: `User` (player identity), `Progreso` (completed run), `Celda` (single cell), `Posicion` (grid coordinate), `Direccion` (cardinal direction).
+
+### OCP — Open / Closed Principle
+
+The scoring system is **open for extension, closed for modification**:
+
+```typescript
+// src/domain/services/scoring/estrategia-puntuacion.interface.ts
+export interface EstrategiaPuntuacion {
+  calcular(nivel: Nivel, movimientos: number, segundosRestantes?: number): number;
+}
+
+// src/domain/services/scoring/puntuacion-por-movimientos.ts
+export class PuntuacionPorMovimientos implements EstrategiaPuntuacion { /* untimed */ }
+
+// src/domain/services/scoring/puntuacion-mixta.ts
+export class PuntuacionMixta implements EstrategiaPuntuacion { /* timed */ }
+```
+
+New strategies implement the interface — no existing code needs modification.
+
+### LSP — Liskov Substitution Principle
+
+All concrete decorators are substitutable for their abstract base:
+
+```typescript
+// src/application/decorators/decorador-caso-de-uso.ts
+export abstract class DecoradorCasoDeUso<E, S> implements ICasoDeUso<E, S> {
+  protected constructor(protected readonly casoDeUso: ICasoDeUso<E, S>) {}
+  execute(entrada: E): Promise<S> {
+    return this.casoDeUso.execute(entrada);
+  }
+}
+
+// src/application/decorators/decorador-metricas.ts
+export class DecoradorMetricas<E, S> extends DecoradorCasoDeUso<E, S> {
+  // Overrides execute, calls super, adds metrics — fully substitutable for ICasoDeUso
+  async execute(entrada: E): Promise<S> {
+    const inicio = Date.now();
+    try { return await super.execute(entrada); }
+    finally { this.medidorMetricas.registrarDuracion(this.nombreCasoDeUso, Date.now() - inicio); }
+  }
+}
+```
+
+### ISP — Interface Segregation Principle
+
+Ports are small and client-specific — consumers never depend on methods they don't use:
+
+| Port | Methods | File |
+|---|---|---|
+| `ICasoDeUso<E, S>` | `execute(entrada: E): Promise<S>` | [`src/application/ports/caso-de-uso.interface.ts`](src/application/ports/caso-de-uso.interface.ts) |
+| `IHashContrasena` | `hash(plain)` · `compare(plain, hash)` | [`src/application/ports/hash-contrasena.port.ts`](src/application/ports/hash-contrasena.port.ts) |
+| `IGeneradorId` | `generar(): string` | [`src/application/ports/generador-id.port.ts`](src/application/ports/generador-id.port.ts) |
+| `IMedidorMetricas` | `registrarDuracion(nombre, duracionMs)` | [`src/application/ports/medidor-metricas.port.ts`](src/application/ports/medidor-metricas.port.ts) |
+| `IRegistro` | `info(mensaje)` | [`src/application/ports/registro.port.ts`](src/application/ports/registro.port.ts) |
+| `IRepositorioNivel` | `guardar(nivel)` · `obtenerPorId(id)` | [`src/domain/repositories/nivel.repository.interface.ts`](src/domain/repositories/nivel.repository.interface.ts) |
+| `EstrategiaPuntuacion` | `calcular(...): number` | [`src/domain/services/scoring/estrategia-puntuacion.interface.ts`](src/domain/services/scoring/estrategia-puntuacion.interface.ts) |
+
+### DIP — Dependency Inversion Principle
+
+Use cases depend on **abstractions (ports/interfaces)**, never on concrete implementations:
+
+```typescript
+// src/application/use-cases/register-user.use-case.ts
+export class RegisterUserUseCase {
+  // Aplicando DIP: Dependemos de la abstracción (Interfaz), no de la implementación concreta
+  constructor(
+    private readonly userRepository: IUserRepository,       // ← port interface
+    private readonly hashContrasena: IHashContrasena,       // ← port interface
+    private readonly publicadorEventos: IPublicadorEventos, // ← port interface
+    private readonly generadorId: IGeneradorId,             // ← port interface
+  ) {}
+
+  async execute(dto: RegisterUserDto): Promise<User> { /* ... */ }
+}
+```
+
+Concrete implementations (`BcryptHashAdapter`, `PrismaUserRepository`, `PublicadorEventosAdapter`, `CryptoGeneradorIdAdapter`) are injected at runtime by the NestJS DI container from the infrastructure layer, keeping domain and application framework-free.
+
+## AOP via SOLID (Decorator Stack)
+
+This project implements **Aspect-Oriented Programming** without an AOP library, relying purely on SOLID principles (specifically OCP + DIP + Decorator pattern). Cross-cutting concerns are composed at the use-case level.
+
+### Architecture
+
+```
+                    ┌─────────────────────────┐
+                    │   ICasoDeUso<E, S>       │  ← Generic use-case contract
+                    └──────────┬──────────────┘
+                               │ implements
+                    ┌──────────┴──────────────┐
+                    │  DecoradorCasoDeUso<E,S> │  ← Abstract base (delegates execute)
+                    └──────────┬──────────────┘
+                  ┌────────────┼────────────┐
+          ┌───────┴──────┐ ┌───┴───────┐ ┌──┴────────┐
+          │Decorador     │ │Decorador  │ │Decorador   │
+          │Metricas      │ │Registro   │ │Seguridad   │
+          └───────┬──────┘ └───┬───────┘ └──┬────────┘
+                  │            │             │
+                  └────────────┼─────────────┘
+                               │ delegates to
+                    ┌──────────┴──────────────┐
+                    │  Use case concreto       │  ← e.g. CrearNivelCasoDeUso
+                    └─────────────────────────┘
+```
+
+### Concrete Decorators
+
+| Decorator | Cross-cutting concern | Depends on port | File |
+|---|---|---|---|
+| `DecoradorMetricas` | Measures and records use-case execution duration | `IMedidorMetricas` | [`src/application/decorators/decorador-metricas.ts`](src/application/decorators/decorador-metricas.ts) |
+| `DecoradorRegistro` | Logs start and finish of use-case execution | `IRegistro` | [`src/application/decorators/decorador-registro.ts`](src/application/decorators/decorador-registro.ts) |
+| `DecoradorSeguridad` | Verifies authenticated session before delegating | `IProveedorSesion` | [`src/application/decorators/decorador-seguridad.ts`](src/application/decorators/decorador-seguridad.ts) |
+
+### Key design decisions (ADR-0004)
+
+- **Two-tier AOP**: use-case level (Decorator stack in `application/`) + transport level (NestJS interceptors in `infrastructure/`).
+- **No AOP library**: composition via `implements ICasoDeUso<E,S>` and abstract `DecoradorCasoDeUso` base class.
+- **Port-based**: each decorator depends on a port interface (`IMedidorMetricas`, `IRegistro`, `IProveedorSesion`), never on concrete adapters — real console I/O stays in `infrastructure/adapters/`.
+- **Composable**: decorators wrap each other in any order. Integration test proves `Seguridad→Registro→Metricas→CrearNivelCasoDeUso` chain at [`src/infrastructure/modules/decorator-stack.integration.spec.ts`](src/infrastructure/modules/decorator-stack.integration.spec.ts).
 
 ## AI-Assisted Development Workflow
 
-This project uses **[OpenCode](https://opencode.ai)** and **[claude code](https://claude.com/code)* as an AI coding agent to maintain architectural consistency across the codebase. The agent is guided by two mechanisms:
+This project uses **[OpenCode](https://opencode.ai)** and **[claude code](https://claude.com/code)** as an AI coding agent to maintain architectural consistency across the codebase. The agent is guided by two mechanisms:
 
 ### Skills (`.agents/skills/`)
 
@@ -163,11 +311,19 @@ Interactive Swagger available at `/api/docs` when running `npm run start:dev`.
 
 ## Quick Start
 
+### Local development
+
 ```bash
 cp .env.example .env          # set DATABASE_URL (PostgreSQL / Supabase)
 npm install
 npx prisma generate
 npm run start:dev             # server at http://localhost:3000, Swagger at /api/docs
+```
+
+### Docker
+
+```bash
+docker-compose up --build     # builds and runs the full stack (app + DB)
 ```
 
 ## Commands
@@ -182,6 +338,47 @@ npm run start:dev             # server at http://localhost:3000, Swagger at /api
 | `npm run lint` | ESLint + Prettier (auto-fix) |
 | `npm run format` | Prettier manual |
 | `npm run seed` | Run database seed |
+
+## Contributing
+
+### Conventional Commits
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+[optional footer(s)]
+```
+
+Types: `feat`, `fix`, `test`, `docs`, `refactor`, `style`, `chore`, `perf`.
+Scopes match the layer or module: `domain`, `application`, `infrastructure`, `auth`, `levels`, `progress`, `leaderboard`, `scoring`, `deps`.
+
+Examples:
+```
+feat(levels): add solvability gate on level creation
+fix(auth): return 409 on duplicate email instead of 500
+test(scoring): add golden-score fixture agreement test
+```
+
+### Branch Workflow
+
+```
+main        ← production-ready, protected
+  develop   ← integration branch, CI must pass
+    feat/*  ← feature branches off develop
+    fix/*   ← bugfix branches off develop
+```
+
+### Pull Request Process
+
+1. Create a feature/fix branch from `develop`.
+2. Implement following TDD (red → green → refactor) with colocated tests.
+3. Ensure all tests pass: `npm run test`.
+4. Run lint: `npm run lint`.
+5. Open a PR against `develop` with a Conventional Commit title.
+6. PR must be reviewed and approved before merging.
 
 ## License
 
