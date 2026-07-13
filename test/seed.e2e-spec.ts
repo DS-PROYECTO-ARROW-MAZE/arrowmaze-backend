@@ -47,6 +47,25 @@ function matrizCeldas(nivel: Nivel): Celda[][] {
   return filas;
 }
 
+// Full depth-aware reconstruction (unlike matrizCeldas above, which only reads layer z=0) —
+// needed to prove a multi-layer (ticket 19) board is solvable across every layer, not just
+// its base.
+function matrizCeldas3D(nivel: Nivel): Celda[][][] {
+  const capas: Celda[][][] = [];
+  for (let z = 0; z < nivel.profundo; z++) {
+    const filas: Celda[][] = [];
+    for (let y = 0; y < nivel.alto; y++) {
+      const fila: Celda[] = [];
+      for (let x = 0; x < nivel.ancho; x++) {
+        fila.push(nivel.definicionTablero.celdaEn(new Posicion(x, y, z)));
+      }
+      filas.push(fila);
+    }
+    capas.push(filas);
+  }
+  return capas;
+}
+
 describe('Seed integrity (Ticket 16 — catalog of 15+ levels)', () => {
   const construirUseCase = (repo: RepositorioNivelEnMemoria) =>
     new CrearNivelCasoDeUso(repo, new GeneradorIdSecuencial());
@@ -140,5 +159,42 @@ describe('Seed integrity (Ticket 16 — catalog of 15+ levels)', () => {
     await sembrar(repo);
 
     expect(repo.niveles.length).toBe(construirCatalogoNiveles().length);
+  });
+
+  // Ticket 19/36 — the three depth-aware boards (cube/pyramid/prism) mirror
+  // arrowmaze-frontend's levels 16-18: same numero, English "Level N" naming (departing
+  // from the "Nivel N" pattern used by 1-15), and profundo > 1 so the frontend's merge
+  // logic (CatalogoNivelesRemoto) picks up a real backend UUID instead of treating them as
+  // local-only.
+  describe('3D catalog levels (16-18)', () => {
+    it('should_seed_levels_16_17_18_with_English_Level_N_names_and_profundo_greater_than_1', async () => {
+      const repo = new RepositorioNivelEnMemoria();
+
+      await sembrar(repo);
+
+      for (const numero of [16, 17, 18]) {
+        const nivel = repo.niveles.find((n) => n.numero === numero);
+        expect(nivel).toBeDefined();
+        expect(nivel!.nombre).toBe(`Level ${numero}`);
+        expect(nivel!.profundo).toBeGreaterThan(1);
+      }
+    });
+
+    it('should_produce_a_board_solvable_across_every_layer_for_each_3D_level', async () => {
+      const repo = new RepositorioNivelEnMemoria();
+
+      await sembrar(repo);
+
+      for (const numero of [16, 17, 18]) {
+        const nivel = repo.niveles.find((n) => n.numero === numero)!;
+        const tablero = new GrafoTablero(
+          nivel.ancho,
+          nivel.alto,
+          matrizCeldas3D(nivel),
+          nivel.profundo,
+        );
+        expect(esSolvable(tablero)).toBe(true);
+      }
+    });
   });
 });
