@@ -31,6 +31,16 @@ export type Celda =
   | Coleccionable
   | CeldaAusente;
 
+// A board's cells can be given either as one 2D layer (Celda[][], rows=y, cols=x — the
+// pre-ticket-19 2D shape) or as an explicit stack of layers indexed [z][y][x] (3D boards).
+// Distinguishing the two only by array nesting (a Celda is never itself an array) lets
+// every existing 2D call site keep passing a bare Celda[][] unchanged.
+export function capasDesde(celdas: Celda[][] | Celda[][][]): Celda[][][] {
+  const primeraFila = celdas[0];
+  const esApilado = Array.isArray(primeraFila) && Array.isArray(primeraFila[0]);
+  return esApilado ? (celdas as Celda[][][]) : [celdas as Celda[][]];
+}
+
 export class FabricaCeldasEstandar {
   static crearFlecha(direccion: Direccion): CeldaFlecha {
     return { tipo: 'flecha', direccion };

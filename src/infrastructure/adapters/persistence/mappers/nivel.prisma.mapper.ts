@@ -20,6 +20,7 @@ export class NivelPrismaMapper {
       dificultad: nivel.dificultad,
       ancho: nivel.ancho,
       alto: nivel.alto,
+      profundo: nivel.profundo,
       baseNivel: nivel.baseNivel,
       kmov: nivel.kmov,
       ktiempo: nivel.ktiempo,
@@ -43,6 +44,7 @@ export class NivelPrismaMapper {
         dificultad: nivel.dificultad,
         ancho: nivel.ancho,
         alto: nivel.alto,
+        profundo: nivel.profundo,
         baseNivel: nivel.baseNivel,
         kmov: nivel.kmov,
         ktiempo: nivel.ktiempo,
@@ -61,12 +63,16 @@ export class NivelPrismaMapper {
   }
 
   static toDomain(row: NivelPrismaRow): Nivel {
-    const celdas = this.celdasMatrixFromRows(row);
+    // The column defaults to 1 in the DB, so every real row already carries a concrete
+    // value; the `?? 1` only guards mocked/pre-migration row shapes in tests.
+    const profundo = row.profundo ?? 1;
+    const capas = this.capasCeldasFromRows(row, profundo);
 
     const definicionTablero = DefinicionTablero.restaurar(
       row.ancho,
       row.alto,
-      celdas,
+      capas,
+      profundo,
     );
 
     return Nivel.crear({
@@ -76,6 +82,7 @@ export class NivelPrismaMapper {
       definicionTablero,
       ancho: row.ancho,
       alto: row.alto,
+      profundo,
       baseNivel: row.baseNivel,
       kmov: row.kmov,
       ktiempo: row.ktiempo,
@@ -88,60 +95,77 @@ export class NivelPrismaMapper {
     });
   }
 
-  private static celdasToPersistence(
-    nivel: Nivel,
-  ): Array<{ x: number; y: number; tipo: string; direccion: string | null }> {
+  private static celdasToPersistence(nivel: Nivel): Array<{
+    x: number;
+    y: number;
+    z: number;
+    tipo: string;
+    direccion: string | null;
+  }> {
     const result: Array<{
       x: number;
       y: number;
+      z: number;
       tipo: string;
       direccion: string | null;
     }> = [];
-    for (let y = 0; y < nivel.alto; y++) {
-      for (let x = 0; x < nivel.ancho; x++) {
-        const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y));
-        // Absent positions of a shaped board are stored as the absence of a row, never as
-        // a filler cell — so a sparse board round-trips without inventing cells.
-        if (celda.tipo === 'ausente') continue;
-        result.push({
-          x,
-          y,
-          tipo: celda.tipo,
-          direccion: celda.tipo === 'flecha' ? celda.direccion : null,
-        });
+    for (let z = 0; z < nivel.profundo; z++) {
+      for (let y = 0; y < nivel.alto; y++) {
+        for (let x = 0; x < nivel.ancho; x++) {
+          const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y, z));
+          // Absent positions of a shaped board are stored as the absence of a row, never
+          // as a filler cell — so a sparse board round-trips without inventing cells.
+          if (celda.tipo === 'ausente') continue;
+          result.push({
+            x,
+            y,
+            z,
+            tipo: celda.tipo,
+            direccion: celda.tipo === 'flecha' ? celda.direccion : null,
+          });
+        }
       }
     }
     return result;
   }
 
-  private static celdasMatrixFromRows(row: NivelPrismaRow): Celda[][] {
-    // The grid spans the full ancho x alto bounding box. Positions with no persisted row
-    // are absent (outside the playable shape), reconstructing the mask on load.
-    const matrix: Celda[][] = Array.from({ length: row.alto }, () =>
-      Array.from({ length: row.ancho }, () =>
-        FabricaCeldasEstandar.crearAusente(),
+  private static capasCeldasFromRows(
+    row: NivelPrismaRow,
+    profundo: number,
+  ): Celda[][][] {
+    // The grid spans the full ancho x alto x profundo volume. Positions with no persisted
+    // row are absent (outside the playable shape), reconstructing the mask on load.
+    const capas: Celda[][][] = Array.from({ length: profundo }, () =>
+      Array.from({ length: row.alto }, () =>
+        Array.from({ length: row.ancho }, () =>
+          FabricaCeldasEstandar.crearAusente(),
+        ),
       ),
     );
 
     for (const celda of row.celdas) {
+      // The column defaults to 0 in the DB, so every real row already carries a concrete
+      // value; the `?? 0` only guards mocked/pre-migration row shapes in tests.
+      const z = celda.z ?? 0;
       switch (celda.tipo) {
         case 'flecha':
-          matrix[celda.y][celda.x] = FabricaCeldasEstandar.crearFlecha(
+          capas[z][celda.y][celda.x] = FabricaCeldasEstandar.crearFlecha(
             celda.direccion as Direccion,
           );
           break;
         case 'pared':
-          matrix[celda.y][celda.x] = FabricaCeldasEstandar.crearPared();
+          capas[z][celda.y][celda.x] = FabricaCeldasEstandar.crearPared();
           break;
         case 'vacia':
-          matrix[celda.y][celda.x] = FabricaCeldasEstandar.crearVacia();
+          capas[z][celda.y][celda.x] = FabricaCeldasEstandar.crearVacia();
           break;
         case 'coleccionable':
-          matrix[celda.y][celda.x] = FabricaCeldasEstandar.crearColeccionable();
+          capas[z][celda.y][celda.x] =
+            FabricaCeldasEstandar.crearColeccionable();
           break;
       }
     }
 
-    return matrix;
+    return capas;
   }
 }

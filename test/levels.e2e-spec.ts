@@ -22,6 +22,7 @@ describe('Levels (e2e)', () => {
   let mockListarNiveles: jest.Mocked<IListarNiveles>;
 
   const idExistente = '00000000-0000-0000-0000-000000000001';
+  const idExistente3D = '00000000-0000-0000-0000-000000000005';
 
   // Deliberately returned pre-ordered by numero: ordering is the query adapter's job
   // (covered by listar-niveles-prisma.spec.ts); here we assert the route serves the
@@ -73,11 +74,38 @@ describe('Levels (e2e)', () => {
     umbralEstrella3: 400,
   });
 
+  // z-axis analogue of nivelExistente: a single arrow travels one cell forward in depth
+  // before exiting the stack (the golden minimalSolvable3D fixture).
+  const nivelExistente3D = Nivel.crear({
+    id: idExistente3D,
+    nombre: 'Nivel 3D Original',
+    dificultad: 'FACIL',
+    definicionTablero: DefinicionTablero.restaurar(
+      1,
+      1,
+      [
+        [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+        [[FabricaCeldasEstandar.crearVacia()]], // z=1
+      ],
+      2,
+    ),
+    ancho: 1,
+    alto: 1,
+    profundo: 2,
+    baseNivel: 1000,
+    kmov: 10,
+    ktiempo: 5,
+    umbralEstrella1: 800,
+    umbralEstrella2: 600,
+    umbralEstrella3: 400,
+  });
+
   beforeEach(async () => {
     mockRepo = {
       guardar: jest.fn().mockResolvedValue(undefined),
       obtenerPorId: jest.fn().mockImplementation((id: string) => {
         if (id === idExistente) return Promise.resolve(nivelExistente);
+        if (id === idExistente3D) return Promise.resolve(nivelExistente3D);
         return Promise.resolve(null);
       }),
     };
@@ -416,5 +444,77 @@ describe('Levels (e2e)', () => {
     const res = await request(app.getHttpServer()).get('/levels').expect(200);
 
     expect(res.body.some((n: NivelResumenDto) => n.esBonus)).toBe(true);
+  });
+
+  describe('profundo (depth axis)', () => {
+    // z-axis analogue of solvableBoard: a single arrow travels one cell forward in depth
+    // before exiting the stack (the golden minimalSolvable3D fixture, in request shape).
+    const board3DSolvable = {
+      nombre: '3D Level',
+      dificultad: 'FACIL',
+      ancho: 1,
+      alto: 1,
+      profundo: 2,
+      celdas: [
+        [[{ tipo: 'flecha', direccion: 'ADELANTE' }]], // z=0
+        [[{ tipo: 'vacia' }]], // z=1
+      ],
+      baseNivel: 1000,
+      kmov: 10,
+      ktiempo: 5,
+      umbralEstrella1: 800,
+      umbralEstrella2: 600,
+      umbralEstrella3: 400,
+    };
+
+    // The golden depthAxisUnsolvable3D fixture, in request shape: two single-cell arrows
+    // pointing at each other along the depth axis block each other forever.
+    const board3DUnsolvable = {
+      ...board3DSolvable,
+      celdas: [
+        [[{ tipo: 'flecha', direccion: 'ADELANTE' }]], // z=0
+        [[{ tipo: 'flecha', direccion: 'ATRAS' }]], // z=1
+      ],
+    };
+
+    it('POST /levels with a solvable 3-layer board returns 201 with the persisted profundo', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/levels')
+        .send(board3DSolvable)
+        .expect(201);
+
+      expect(res.body.profundo).toBe(2);
+      expect(mockRepo.guardar).toHaveBeenCalledTimes(1);
+      const nivelGuardado = mockRepo.guardar.mock.calls[0][0];
+      expect(nivelGuardado.profundo).toBe(2);
+      expect(
+        nivelGuardado.definicionTablero.celdaEn(new Posicion(0, 0, 0)).tipo,
+      ).toBe('flecha');
+      expect(
+        nivelGuardado.definicionTablero.celdaEn(new Posicion(0, 0, 1)).tipo,
+      ).toBe('vacia');
+    });
+
+    it('POST /levels with two arrows blocking each other across layers returns 422 and persists nothing', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/levels')
+        .send(board3DUnsolvable)
+        .expect(422);
+
+      expect(res.body.message).toContain('no es solvable');
+      expect(mockRepo.guardar).not.toHaveBeenCalled();
+    });
+
+    it('GET /levels/:id returns the same profundo and per-cell z the level was created with', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/levels/${idExistente3D}`)
+        .expect(200);
+
+      expect(res.body.profundo).toBe(2);
+      expect(res.body.celdas).toEqual([
+        [[{ tipo: 'flecha', direccion: 'ADELANTE' }]],
+        [[{ tipo: 'vacia' }]],
+      ]);
+    });
   });
 });

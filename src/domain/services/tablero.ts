@@ -5,6 +5,7 @@ import { Celda } from '../value-objects/celda';
 export interface Tablero {
   readonly ancho: number;
   readonly alto: number;
+  readonly profundo: number;
 
   celdaEn(pos: Posicion): Celda;
 

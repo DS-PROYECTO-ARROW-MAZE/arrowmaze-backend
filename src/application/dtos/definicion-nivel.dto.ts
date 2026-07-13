@@ -6,7 +6,8 @@ export interface DefinicionNivelDto {
   dificultad: string;
   ancho: number;
   alto: number;
-  celdas: CeldaDto[][];
+  profundo: number;
+  celdas: CeldaDto[][] | CeldaDto[][][];
   baseNivel: number;
   kmov: number;
   ktiempo: number;

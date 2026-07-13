@@ -39,7 +39,14 @@ export class CrearNivelRequestDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CeldaRequestDto)
-  celdas!: CeldaRequestDto[][];
+  celdas!: CeldaRequestDto[][] | CeldaRequestDto[][][];
+
+  // Depth axis ("capa" count). Optional: when omitted the board is a single layer (2D),
+  // matching every pre-ticket-19 request body.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  profundo?: number;
 
   @IsNumber()
   @Min(0)

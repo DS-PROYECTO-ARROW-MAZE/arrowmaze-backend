@@ -18,8 +18,13 @@ export class ObtenerNivelCasoDeUso {
       throw new NivelNoEncontradoException(id);
     }
 
-    const matrizCeldas = this.extraerMatrizCeldas(nivel);
-    const tablero = new GrafoTablero(nivel.ancho, nivel.alto, matrizCeldas);
+    const capasCeldas = this.extraerCapasCeldas(nivel);
+    const tablero = new GrafoTablero(
+      nivel.ancho,
+      nivel.alto,
+      capasCeldas,
+      nivel.profundo,
+    );
     if (!esSolvable(tablero)) {
       throw new NivelNoSolvableException();
     }
@@ -27,16 +32,20 @@ export class ObtenerNivelCasoDeUso {
     return this.mapearADto(nivel);
   }
 
-  private extraerMatrizCeldas(nivel: Nivel): Celda[][] {
-    const resultado: Celda[][] = [];
-    for (let y = 0; y < nivel.alto; y++) {
-      const fila: Celda[] = [];
-      for (let x = 0; x < nivel.ancho; x++) {
-        fila.push(nivel.definicionTablero.celdaEn(new Posicion(x, y)));
+  private extraerCapasCeldas(nivel: Nivel): Celda[][][] {
+    const capas: Celda[][][] = [];
+    for (let z = 0; z < nivel.profundo; z++) {
+      const fila2D: Celda[][] = [];
+      for (let y = 0; y < nivel.alto; y++) {
+        const fila: Celda[] = [];
+        for (let x = 0; x < nivel.ancho; x++) {
+          fila.push(nivel.definicionTablero.celdaEn(new Posicion(x, y, z)));
+        }
+        fila2D.push(fila);
       }
-      resultado.push(fila);
+      capas.push(fila2D);
     }
-    return resultado;
+    return capas;
   }
 
   private mapearADto(nivel: Nivel): DefinicionNivelDto {
@@ -46,6 +55,7 @@ export class ObtenerNivelCasoDeUso {
       dificultad: nivel.dificultad,
       ancho: nivel.ancho,
       alto: nivel.alto,
+      profundo: nivel.profundo,
       celdas: this.mapearCeldasADto(nivel),
       baseNivel: nivel.baseNivel,
       kmov: nivel.kmov,
@@ -57,19 +67,25 @@ export class ObtenerNivelCasoDeUso {
     };
   }
 
-  private mapearCeldasADto(nivel: Nivel): CeldaDto[][] {
-    const resultado: CeldaDto[][] = [];
-    for (let y = 0; y < nivel.alto; y++) {
-      const fila: CeldaDto[] = [];
-      for (let x = 0; x < nivel.ancho; x++) {
-        const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y));
-        fila.push({
-          tipo: celda.tipo,
-          ...(celda.tipo === 'flecha' ? { direccion: celda.direccion } : {}),
-        });
+  // Walks z/y/x and returns the bare 2D [y][x] shape when profundo is 1 (every
+  // pre-ticket-19 level), or the layered [z][y][x] shape otherwise.
+  private mapearCeldasADto(nivel: Nivel): CeldaDto[][] | CeldaDto[][][] {
+    const capas: CeldaDto[][][] = [];
+    for (let z = 0; z < nivel.profundo; z++) {
+      const fila2D: CeldaDto[][] = [];
+      for (let y = 0; y < nivel.alto; y++) {
+        const fila: CeldaDto[] = [];
+        for (let x = 0; x < nivel.ancho; x++) {
+          const celda = nivel.definicionTablero.celdaEn(new Posicion(x, y, z));
+          fila.push({
+            tipo: celda.tipo,
+            ...(celda.tipo === 'flecha' ? { direccion: celda.direccion } : {}),
+          });
+        }
+        fila2D.push(fila);
       }
-      resultado.push(fila);
+      capas.push(fila2D);
     }
-    return resultado;
+    return nivel.profundo === 1 ? capas[0] : capas;
   }
 }

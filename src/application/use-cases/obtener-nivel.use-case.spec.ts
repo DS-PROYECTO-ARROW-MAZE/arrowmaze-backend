@@ -134,4 +134,42 @@ describe('ObtenerNivelCasoDeUso', () => {
 
     expect(resultado.limiteTiempo).toBe(60);
   });
+
+  describe('profundo (depth axis)', () => {
+    const nivel3D = Nivel.crear({
+      id: '00000000-0000-0000-0000-000000000004',
+      nombre: 'Nivel 3D',
+      dificultad: 'FACIL',
+      definicionTablero: DefinicionTablero.restaurar(
+        1,
+        1,
+        [
+          [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+          [[FabricaCeldasEstandar.crearVacia()]], // z=1
+        ],
+        2,
+      ),
+      ancho: 1,
+      alto: 1,
+      profundo: 2,
+      baseNivel: 1000,
+      kmov: 10,
+      ktiempo: 5,
+      umbralEstrella1: 800,
+      umbralEstrella2: 600,
+      umbralEstrella3: 400,
+    });
+
+    it('should_return_the_same_profundo_and_layered_celdas_the_level_was_created_with', async () => {
+      repo.obtenerPorId.mockResolvedValue(nivel3D);
+
+      const resultado = await useCase.execute(nivel3D.id);
+
+      expect(resultado.profundo).toBe(2);
+      expect(resultado.celdas).toEqual([
+        [[{ tipo: 'flecha', direccion: 'ADELANTE' }]],
+        [[{ tipo: 'vacia' }]],
+      ]);
+    });
+  });
 });

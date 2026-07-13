@@ -21,14 +21,20 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
   ) {}
 
   async execute(dto: CrearNivelDto): Promise<CrearNivelResultadoDto> {
+    const profundo = dto.profundo ?? 1;
     const celdas = mapearCeldasDesdeDto(dto.celdas);
 
-    const tablero = new GrafoTablero(dto.ancho, dto.alto, celdas);
+    const tablero = new GrafoTablero(dto.ancho, dto.alto, celdas, profundo);
     if (!esSolvable(tablero)) {
       throw new NivelNoSolvableException();
     }
 
-    const definicion = DefinicionTablero.crear(dto.ancho, dto.alto, celdas);
+    const definicion = DefinicionTablero.crear(
+      dto.ancho,
+      dto.alto,
+      celdas,
+      profundo,
+    );
 
     const nivel = Nivel.crear({
       id: this.generadorId.generar(),
@@ -37,6 +43,7 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
       definicionTablero: definicion,
       ancho: dto.ancho,
       alto: dto.alto,
+      profundo,
       baseNivel: dto.baseNivel,
       kmov: dto.kmov,
       ktiempo: dto.ktiempo,
@@ -56,6 +63,7 @@ export class CrearNivelCasoDeUso implements ICasoDeUso<
       dificultad: nivel.dificultad,
       ancho: nivel.ancho,
       alto: nivel.alto,
+      profundo: nivel.profundo,
       baseNivel: nivel.baseNivel,
       kmov: nivel.kmov,
       ktiempo: nivel.ktiempo,

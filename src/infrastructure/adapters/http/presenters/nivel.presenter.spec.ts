@@ -3,6 +3,7 @@ import { Nivel } from '../../../../domain/aggregates/nivel';
 import { DefinicionTablero } from '../../../../domain/value-objects/definicion-tablero';
 import { FabricaCeldasEstandar } from '../../../../domain/value-objects/celda';
 import { Direccion } from '../../../../domain/value-objects/direccion';
+import { CeldaDto } from '../../../../application/dtos/crear-nivel.dto';
 
 describe('NivelPresenter', () => {
   const nivel = Nivel.crear({
@@ -75,7 +76,9 @@ describe('NivelPresenter', () => {
     const dto = NivelPresenter.toDto(nivel);
 
     expect(dto).not.toBeInstanceOf(Nivel);
-    for (const fila of dto.celdas) {
+    // nivel is a 2D (profundo=1) level, so celdas is the bare [y][x] shape.
+    const celdas = dto.celdas as CeldaDto[][];
+    for (const fila of celdas) {
       for (const celda of fila) {
         expect(typeof celda.tipo).toBe('string');
       }
@@ -113,5 +116,49 @@ describe('NivelPresenter', () => {
       [{ tipo: 'flecha', direccion: 'DERECHA' }, { tipo: 'pared' }],
       [{ tipo: 'vacia' }, { tipo: 'coleccionable' }],
     ]);
+  });
+
+  it('should_default_profundo_to_1_when_toDto_is_called_on_a_2D_level', () => {
+    const dto = NivelPresenter.toDto(nivel);
+    expect(dto.profundo).toBe(1);
+  });
+
+  describe('profundo (depth axis)', () => {
+    const nivel3D = Nivel.crear({
+      id: '00000000-0000-0000-0000-000000000004',
+      nombre: 'Nivel 3D',
+      dificultad: 'FACIL',
+      definicionTablero: DefinicionTablero.restaurar(
+        1,
+        1,
+        [
+          [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+          [[FabricaCeldasEstandar.crearVacia()]], // z=1
+        ],
+        2,
+      ),
+      ancho: 1,
+      alto: 1,
+      profundo: 2,
+      baseNivel: 1000,
+      kmov: 10,
+      ktiempo: 5,
+      umbralEstrella1: 800,
+      umbralEstrella2: 600,
+      umbralEstrella3: 400,
+    });
+
+    it('should_include_profundo_when_toDto_is_called_on_a_3D_level', () => {
+      const dto = NivelPresenter.toDto(nivel3D);
+      expect(dto.profundo).toBe(2);
+    });
+
+    it('should_index_celdas_as_z_y_x_when_toDto_is_called_on_a_3D_level', () => {
+      const dto = NivelPresenter.toDto(nivel3D);
+      expect(dto.celdas).toEqual([
+        [[{ tipo: 'flecha', direccion: 'ADELANTE' }]],
+        [[{ tipo: 'vacia' }]],
+      ]);
+    });
   });
 });
