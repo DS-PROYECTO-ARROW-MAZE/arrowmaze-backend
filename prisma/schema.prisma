@@ -33,6 +33,9 @@ model Nivel {
   dificultad      String
   ancho           Int
   alto            Int
+  // Depth axis ("capa" count). Defaults to 1 so every pre-existing row is already a valid
+  // single-layer 3D board (ticket 19) — the migration adds the column, it never backfills.
+  profundo        Int         @default(1)
   baseNivel       Int         @map("base_nivel")
   kmov            Int
   ktiempo         Int
@@ -53,6 +56,9 @@ model CeldaNivel {
   nivelId   String @map("nivel_id") @db.Uuid
   x         Int
   y         Int
+  // Depth coordinate ("capa" index). Defaults to 0 so every pre-existing row already sits
+  // on the single layer of its (defaulted) profundo=1 board.
+  z         Int    @default(0)
   tipo      String
   direccion String?
   nivel     Nivel  @relation(fields: [nivelId], references: [id], onDelete: Cascade)

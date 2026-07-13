@@ -67,23 +67,35 @@ export class ActualizarNivelCasoDeUso {
   }
 }
 
-export function mapearCeldasDesdeDto(celdasDto: CeldaDto[][]): Celda[][] {
-  return celdasDto.map((fila) =>
-    fila.map((celdaDto) => {
-      switch (celdaDto.tipo) {
-        case 'flecha':
-          return FabricaCeldasEstandar.crearFlecha(
-            celdaDto.direccion as Direccion,
-          );
-        case 'pared':
-          return FabricaCeldasEstandar.crearPared();
-        case 'vacia':
-          return FabricaCeldasEstandar.crearVacia();
-        case 'coleccionable':
-          return FabricaCeldasEstandar.crearColeccionable();
-        case 'ausente':
-          return FabricaCeldasEstandar.crearAusente();
-      }
-    }),
-  );
+function mapearCelda(celdaDto: CeldaDto): Celda {
+  switch (celdaDto.tipo) {
+    case 'flecha':
+      return FabricaCeldasEstandar.crearFlecha(celdaDto.direccion as Direccion);
+    case 'pared':
+      return FabricaCeldasEstandar.crearPared();
+    case 'vacia':
+      return FabricaCeldasEstandar.crearVacia();
+    case 'coleccionable':
+      return FabricaCeldasEstandar.crearColeccionable();
+    case 'ausente':
+      return FabricaCeldasEstandar.crearAusente();
+  }
+}
+
+// Accepts either a single 2D layer (CeldaDto[][], the pre-ticket-19 shape) or an explicit
+// stack of layers indexed [z][y][x] (3D boards) — mirrors domain/value-objects/celda.ts's
+// capasDesde detection (a CeldaDto is never itself an array) so every existing 2D caller
+// keeps passing a bare CeldaDto[][] unchanged.
+export function mapearCeldasDesdeDto(
+  celdasDto: CeldaDto[][] | CeldaDto[][][],
+): Celda[][] | Celda[][][] {
+  const primeraFila = celdasDto[0];
+  const esApilado = Array.isArray(primeraFila) && Array.isArray(primeraFila[0]);
+
+  if (esApilado) {
+    return (celdasDto as CeldaDto[][][]).map((capa) =>
+      capa.map((fila) => fila.map(mapearCelda)),
+    );
+  }
+  return (celdasDto as CeldaDto[][]).map((fila) => fila.map(mapearCelda));
 }

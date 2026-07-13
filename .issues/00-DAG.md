@@ -119,3 +119,21 @@
 - **Scope:** read-only, JWT-guarded endpoint returning **best-per-level** (one row per level,
   guaranteed by ticket 13's `@@unique`). Validates the high-score rule from the read side; does
   **not** re-implement the strictly-greater upsert (that stays in ticket 13).
+
+## Phase 7 — Enhancement batch 3 (ticket 19)
+
+> Added 2026-07-13. Adds a depth axis ("capa"/z) to the board — the 3D board the PRD (§1.1,
+> §6.1, §8) has flagged as the target OCP extension since inception. Cross-repo twin:
+> `arrowmaze-frontend` ticket 36.
+
+| # | Ticket | Story | Blocked by | Phase | Priority |
+|---|--------|-------|------------|-------|----------|
+| 19 | 3D board geometry — depth axis (Posicion/Direccion/DefinicionTablero + persistence) | C3‴′ | 01, 14 | 7 | — |
+
+- **Grab first:** 19 is independent of tickets 15–18; it only needs the level-authoring gate
+  (01) and the mask/length-invariant machinery (14) it extends into a third axis.
+- **Cross-repo agreement:** the three 3D golden boards in
+  `src/shared/__fixtures__/golden-boards-3d.ts` must stay in lockstep with
+  `arrowmaze-frontend` ticket 36's Dart fixtures (see that file's header note — the two
+  domain models differ in shape, so only the minimal-smoke-test and unsolvable fixtures are
+  structurally identical across repos).

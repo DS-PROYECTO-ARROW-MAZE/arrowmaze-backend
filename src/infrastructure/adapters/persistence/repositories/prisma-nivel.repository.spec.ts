@@ -182,4 +182,134 @@ describe('PrismaNivelRepository', () => {
       'vacia',
     );
   });
+
+  describe('profundo (depth axis)', () => {
+    it('should_persist_profundo_and_the_z_coordinate_of_every_cell_when_guardar_is_called_on_a_3D_level', async () => {
+      const nivel3D = Nivel.crear({
+        ...nivel,
+        definicionTablero: DefinicionTablero.restaurar(
+          1,
+          1,
+          [
+            [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+            [[FabricaCeldasEstandar.crearVacia()]], // z=1
+          ],
+          2,
+        ),
+        ancho: 1,
+        alto: 1,
+        profundo: 2,
+      });
+
+      mockCreate.mockResolvedValue(undefined);
+      await repository.guardar(nivel3D);
+
+      const data = mockCreate.mock.calls[0][0].data;
+      expect(data.profundo).toBe(2);
+      const persisted = data.celdas.create;
+      expect(persisted).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ x: 0, y: 0, z: 0, tipo: 'flecha' }),
+          expect.objectContaining({ x: 0, y: 0, z: 1, tipo: 'vacia' }),
+        ]),
+      );
+    });
+
+    it('should_reconstruct_the_same_3D_DefinicionTablero_when_obtenerPorId_finds_a_layered_row', async () => {
+      mockFindUnique.mockResolvedValue({
+        id: nivel.id,
+        nombre: 'Test',
+        dificultad: 'FACIL',
+        ancho: 1,
+        alto: 1,
+        profundo: 2,
+        baseNivel: 1000,
+        kmov: 10,
+        ktiempo: 5,
+        umbralEstrella1: 800,
+        umbralEstrella2: 600,
+        umbralEstrella3: 400,
+        limiteTiempo: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        celdas: [
+          {
+            id: 'celda-1',
+            nivelId: nivel.id,
+            x: 0,
+            y: 0,
+            z: 0,
+            tipo: 'flecha',
+            direccion: 'ADELANTE',
+          },
+          {
+            id: 'celda-2',
+            nivelId: nivel.id,
+            x: 0,
+            y: 0,
+            z: 1,
+            tipo: 'vacia',
+            direccion: null,
+          },
+        ],
+      });
+
+      const cargado = await repository.obtenerPorId(nivel.id);
+
+      expect(cargado!.profundo).toBe(2);
+      expect(
+        cargado!.definicionTablero.celdaEn(new Posicion(0, 0, 0)).tipo,
+      ).toBe('flecha');
+      expect(
+        cargado!.definicionTablero.celdaEn(new Posicion(0, 0, 1)).tipo,
+      ).toBe('vacia');
+    });
+
+    it('should_default_profundo_to_1_and_z_to_0_when_a_2D_row_is_loaded_regression', async () => {
+      mockFindUnique.mockResolvedValue({
+        id: nivel.id,
+        nombre: 'Test',
+        dificultad: 'FACIL',
+        ancho: 2,
+        alto: 1,
+        profundo: 1,
+        baseNivel: 1000,
+        kmov: 10,
+        ktiempo: 5,
+        umbralEstrella1: 800,
+        umbralEstrella2: 600,
+        umbralEstrella3: 400,
+        limiteTiempo: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        celdas: [
+          {
+            id: 'celda-1',
+            nivelId: nivel.id,
+            x: 0,
+            y: 0,
+            z: 0,
+            tipo: 'flecha',
+            direccion: 'DERECHA',
+          },
+          {
+            id: 'celda-2',
+            nivelId: nivel.id,
+            x: 1,
+            y: 0,
+            z: 0,
+            tipo: 'vacia',
+            direccion: null,
+          },
+        ],
+      });
+
+      const cargado = await repository.obtenerPorId(nivel.id);
+
+      expect(cargado!.profundo).toBe(1);
+      expect(cargado!.definicionTablero.celdaEn(new Posicion(0, 0)).tipo).toBe(
+        'flecha',
+      );
+    });
+  });
 });

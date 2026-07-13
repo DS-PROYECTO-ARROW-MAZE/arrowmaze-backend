@@ -11,7 +11,11 @@ export interface CrearNivelDto {
   dificultad: string;
   ancho: number;
   alto: number;
-  celdas: CeldaDto[][];
+  // Depth axis ("capa" count). Optional at the API: when omitted the board is a single
+  // layer (2D), preserving every pre-ticket-19 caller. celdas indexes as [z][y][x] when
+  // profundo > 1 (or a plain [y][x] matrix for the 2D, profundo-omitted case).
+  profundo?: number;
+  celdas: CeldaDto[][] | CeldaDto[][][];
   baseNivel: number;
   kmov: number;
   ktiempo: number;
@@ -32,6 +36,7 @@ export interface CrearNivelResultadoDto {
   dificultad: string;
   ancho: number;
   alto: number;
+  profundo: number;
   baseNivel: number;
   kmov: number;
   ktiempo: number;

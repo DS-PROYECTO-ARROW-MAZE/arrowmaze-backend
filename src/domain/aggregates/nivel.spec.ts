@@ -129,6 +129,32 @@ describe('Nivel', () => {
     });
   });
 
+  describe('profundo (depth axis)', () => {
+    it('should_default_profundo_to_1_when_omitted', () => {
+      const nivel = crearConReglas({ numero: 3 });
+      expect(nivel.profundo).toBe(1);
+    });
+
+    it('should_store_an_explicit_profundo_when_provided', () => {
+      const nivel = Nivel.crear({
+        id: 'nivel-3d',
+        nombre: '3D',
+        dificultad: 'FACIL',
+        definicionTablero: definicion,
+        ancho: 1,
+        alto: 1,
+        profundo: 3,
+        baseNivel: 1000,
+        kmov: 10,
+        ktiempo: 5,
+        umbralEstrella1: 800,
+        umbralEstrella2: 600,
+        umbralEstrella3: 400,
+      });
+      expect(nivel.profundo).toBe(3);
+    });
+  });
+
   describe('bonus levels', () => {
     it('should_mark_level_non_scoring_when_esBonus_is_true', () => {
       const nivel = crearConReglas({ numero: 3, esBonus: true });

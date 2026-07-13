@@ -12,6 +12,9 @@ export interface CrearNivelParams {
   definicionTablero: DefinicionTablero;
   ancho: number;
   alto: number;
+  // Depth axis ("capa" count). Optional here so 2D fixtures/restores need not invent one;
+  // real 3D creation supplies it via the DTO. Defaults to 1 (a single-layer, 2D board).
+  profundo?: number;
   baseNivel: number;
   kmov: number;
   ktiempo: number;
@@ -37,6 +40,7 @@ export class Nivel {
     public readonly definicionTablero: DefinicionTablero,
     public readonly ancho: number,
     public readonly alto: number,
+    public readonly profundo: number,
     public readonly baseNivel: number,
     public readonly kmov: number,
     public readonly ktiempo: number,
@@ -71,6 +75,7 @@ export class Nivel {
       params.definicionTablero,
       params.ancho,
       params.alto,
+      params.profundo ?? 1,
       params.baseNivel,
       params.kmov,
       params.ktiempo,

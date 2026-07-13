@@ -1,30 +1,43 @@
 import { GrafoTablero } from './grafo-tablero';
-import { FabricaCeldasEstandar } from '../value-objects/celda';
+import { FabricaCeldasEstandar, Celda } from '../value-objects/celda';
 import { Direccion } from '../value-objects/direccion';
 import { esSolvable } from './solver';
 import {
   goldenBoards,
   GoldenBoard,
+  GoldenCelda,
 } from '../../shared/__fixtures__/golden-boards';
+import {
+  goldenBoards3D,
+  GoldenBoard3D,
+  GoldenCelda3D,
+} from '../../shared/__fixtures__/golden-boards-3d';
+
+function celdaDesdeGolden(gc: GoldenCelda | GoldenCelda3D): Celda {
+  switch (gc.tipo) {
+    case 'flecha':
+      return FabricaCeldasEstandar.crearFlecha(gc.direccion as Direccion);
+    case 'pared':
+      return FabricaCeldasEstandar.crearPared();
+    case 'vacia':
+      return FabricaCeldasEstandar.crearVacia();
+    case 'coleccionable':
+      return FabricaCeldasEstandar.crearColeccionable();
+    case 'ausente':
+      return FabricaCeldasEstandar.crearAusente();
+  }
+}
 
 function tableroDesdeGolden(golden: GoldenBoard): GrafoTablero {
-  const celdas = golden.celdas.map((fila) =>
-    fila.map((gc) => {
-      switch (gc.tipo) {
-        case 'flecha':
-          return FabricaCeldasEstandar.crearFlecha(gc.direccion as Direccion);
-        case 'pared':
-          return FabricaCeldasEstandar.crearPared();
-        case 'vacia':
-          return FabricaCeldasEstandar.crearVacia();
-        case 'coleccionable':
-          return FabricaCeldasEstandar.crearColeccionable();
-        case 'ausente':
-          return FabricaCeldasEstandar.crearAusente();
-      }
-    }),
-  );
+  const celdas = golden.celdas.map((fila) => fila.map(celdaDesdeGolden));
   return new GrafoTablero(golden.ancho, golden.alto, celdas);
+}
+
+function tableroDesdeGolden3D(golden: GoldenBoard3D): GrafoTablero {
+  const capas = golden.capas.map((capa) =>
+    capa.map((fila) => fila.map(celdaDesdeGolden)),
+  );
+  return new GrafoTablero(golden.ancho, golden.alto, capas, golden.profundo);
 }
 
 describe('Solver', () => {
@@ -165,6 +178,27 @@ describe('Solver', () => {
     it('should_return_true_when_the_board_is_a_golden_solvable_heart_board', () => {
       const tablero = tableroDesdeGolden(goldenBoards.heartSolvable);
       expect(esSolvable(tablero)).toBe(true);
+    });
+
+    describe('depth axis (3D golden boards)', () => {
+      it('should_return_true_when_the_board_is_the_golden_minimal_solvable_3D_board', () => {
+        const tablero = tableroDesdeGolden3D(goldenBoards3D.minimalSolvable3D);
+        expect(esSolvable(tablero)).toBe(true);
+      });
+
+      it('should_return_true_when_the_board_is_the_golden_cross_layer_dependency_solvable_3D_board', () => {
+        const tablero = tableroDesdeGolden3D(
+          goldenBoards3D.crossLayerDependencySolvable3D,
+        );
+        expect(esSolvable(tablero)).toBe(true);
+      });
+
+      it('should_return_false_when_the_board_is_the_golden_depth_axis_unsolvable_3D_board', () => {
+        const tablero = tableroDesdeGolden3D(
+          goldenBoards3D.depthAxisUnsolvable3D,
+        );
+        expect(esSolvable(tablero)).toBe(false);
+      });
     });
   });
 });

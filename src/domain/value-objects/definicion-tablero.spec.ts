@@ -102,4 +102,54 @@ describe('DefinicionTablero', () => {
       expect(dt.celdaEn(new Posicion(0, 0)).tipo).toBe('flecha');
     });
   });
+
+  describe('profundo (depth axis)', () => {
+    it('should_default_profundo_to_1_when_omitted_so_every_2D_call_site_stays_valid', () => {
+      const celdas = [
+        [
+          FabricaCeldasEstandar.crearFlecha(Direccion.DERECHA),
+          FabricaCeldasEstandar.crearVacia(),
+        ],
+      ];
+      const dt = DefinicionTablero.crear(2, 1, celdas);
+      expect(dt.profundo).toBe(1);
+    });
+
+    it('should_index_celdas_as_z_y_x_when_an_explicit_profundo_and_layered_celdas_are_given', () => {
+      const capas = [
+        [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+        [[FabricaCeldasEstandar.crearVacia()]], // z=1
+      ];
+      const dt = DefinicionTablero.crear(1, 1, capas, 2);
+
+      expect(dt.profundo).toBe(2);
+      expect(dt.celdaEn(new Posicion(0, 0, 0)).tipo).toBe('flecha');
+      expect(dt.celdaEn(new Posicion(0, 0, 1)).tipo).toBe('vacia');
+    });
+
+    it('should_throw_FlechaLongitudInvalidaException_when_a_depth_axis_arrow_immediately_leaves_the_stack', () => {
+      const capas = [[[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]]];
+      expect(() => DefinicionTablero.crear(1, 1, capas, 1)).toThrow(
+        FlechaLongitudInvalidaException,
+      );
+    });
+
+    it('should_accept_a_depth_axis_arrow_when_its_path_is_exactly_the_minimum_length', () => {
+      const capas = [
+        [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+        [[FabricaCeldasEstandar.crearVacia()]], // z=1
+      ];
+      expect(() => DefinicionTablero.crear(1, 1, capas, 2)).not.toThrow();
+    });
+
+    it('should_throw_when_the_cell_behind_a_depth_axis_arrow_is_absent', () => {
+      const capas = [
+        [[FabricaCeldasEstandar.crearFlecha(Direccion.ADELANTE)]], // z=0
+        [[FabricaCeldasEstandar.crearAusente()]], // z=1
+      ];
+      expect(() => DefinicionTablero.crear(1, 1, capas, 2)).toThrow(
+        FlechaLongitudInvalidaException,
+      );
+    });
+  });
 });
